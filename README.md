@@ -10,11 +10,11 @@ if (-not (Test-Path .env.local)) { Copy-Item frontend/.env.example .env.local }
 
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` from Supabase Project Settings → API. These are public browser credentials; never put a service-role key in a `VITE_` variable. Create `backend/.env` separately for backend settings such as `GEMINI_API_KEY`, `GEMINI_MODEL`, `STORAGE_BACKEND`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and `SUPABASE_BUCKET`.
 
-## Email OTP registration and sign-in
+## Email registration and sign-in
 
-Run `backend/docs/supabase_auth_schema.sql` in the Supabase SQL Editor to create the profile table, row-level security policy, new-user trigger, and profiles for existing Auth users. In Supabase Authentication settings, enable the Email provider and email confirmation. Set the **Confirm signup** email template body to include `{{ .Token }}` as the one-time code; do not use `{{ .ConfirmationURL }}`. Configure custom SMTP for reliable production delivery. Restart Vite after editing `.env.local`.
+Run `backend/docs/supabase_auth_schema.sql` in the Supabase SQL Editor to create the profile table, row-level security policy, new-user trigger, and profiles for existing Auth users. In Supabase Authentication settings, enable the Email provider and turn **Confirm email** off to allow direct account creation without OTP or email links. Configure SMTP only if you later enable email-based verification or recovery. Restart Vite after editing `.env.local`.
 
-Registration collects a name, USN/student ID, email, and password. The user enters the emailed OTP in the app; successful verification signs them out and returns them to sign in with their email and password. New accounts receive the `student` role, and the USN/student ID is stored in `profiles.student_id`. Grant faculty access only to approved users by running the commented profile update at the end of `backend/docs/supabase_auth_schema.sql` in the SQL Editor with their email address.
+Registration collects a name, USN/student ID, email, and password, then signs the new account in directly. New accounts receive the `student` role, and the USN/student ID is stored in `profiles.student_id`. Grant faculty access only to approved users by running the commented profile update at the end of `backend/docs/supabase_auth_schema.sql` in the SQL Editor with their email address. Disabling email confirmation means users can register with an address they have not proven they own.
 
 The backend reads `GEMINI_API_KEY` and `GEMINI_MODEL`, with optional `GEMINI_BASE_URL`, plus `API_KEY`, `RUNS_PER_PERSONA`, and `MAX_CONCURRENCY`. Never put service-role keys or other backend secrets in frontend code.
 

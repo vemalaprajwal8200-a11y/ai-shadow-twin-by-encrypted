@@ -101,25 +101,16 @@ export function AuthProvider({ children }) {
       })
       if (error) throw error
       if (!data.user) throw new Error('Account registration did not return a user.')
-    },
-    async verifySignupOtp(email, token) {
-      const client = getSupabaseClient()
-      const { data, error } = await client.auth.verifyOtp({
-        email: email.trim(),
-        token: token.trim(),
-        type: 'signup',
-      })
-      if (error) throw error
-      if (!data.user) throw new Error('Email verification did not return an account.')
+      if (!data.session) {
+        if (data.user.identities?.length === 0) {
+          throw new Error('An account with this email may already exist. Try signing in instead.')
+        }
+        return { requiresEmailConfirmation: true }
+      }
 
-      const { error: signOutError } = await client.auth.signOut({ scope: 'local' })
-      if (signOutError) throw signOutError
-      setUser(null)
-    },
-    async resendSignupOtp(email) {
-      const client = getSupabaseClient()
-      const { error } = await client.auth.resend({ type: 'signup', email: email.trim() })
-      if (error) throw error
+      const profileUser = await getProfileUser(client, data.user)
+      setUser(profileUser)
+      return { user: profileUser }
     },
     async loginWithEmail(email, password) {
       const client = getSupabaseClient()

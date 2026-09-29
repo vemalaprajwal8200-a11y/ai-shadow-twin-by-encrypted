@@ -1,4 +1,4 @@
--- Run in the Supabase SQL Editor to enable verified student registration.
+-- Run in the Supabase SQL Editor to enable student registration.
 
 create table if not exists public.profiles (
     id uuid primary key references auth.users(id) on delete cascade,
