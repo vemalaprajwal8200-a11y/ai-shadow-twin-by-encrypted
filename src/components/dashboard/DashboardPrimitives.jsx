@@ -1,21 +1,28 @@
 import { ArrowUpRight, Check } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Badge, Card as UiCard, PageHeader } from '../ui/Primitives'
 
 const chipClasses = {
   verdict: {
     'Content defect': 'bg-danger/10 text-danger',
-    'Ability gap': 'bg-ability-gap/10 text-ink ring-1 ring-ability-gap/50',
-    Clean: 'bg-accent text-accent-fg',
+    'Ability gap': 'bg-ability-gap/10 text-ink ring-1 ring-ability-gap/35',
+    Clean: 'bg-primary/10 text-primary',
   },
   severity: {
     High: 'bg-danger/10 text-danger',
-    Medium: 'bg-warn/25 text-ink',
-    Low: 'bg-primary text-primary-fg',
+    Medium: 'bg-ambiguous/15 text-ink',
+    Low: 'bg-page text-muted',
   },
   status: {
-    Confirmed: 'bg-primary text-primary-fg',
-    Dismissed: 'bg-surface text-muted',
+    Confirmed: 'bg-primary/10 text-primary',
+    Dismissed: 'bg-page text-muted',
   },
+}
+
+const chipTones = {
+  verdict: { 'Content defect': 'danger', 'Ability gap': 'info', Clean: 'success' },
+  severity: { High: 'danger', Medium: 'warning', Low: 'neutral' },
+  status: { Confirmed: 'success', Dismissed: 'neutral' },
 }
 
 /** @param {'verdict' | 'severity' | 'status'} kind @param {string} value */
@@ -25,20 +32,16 @@ export function getChipClass(kind, value) {
 
 /** @param {import('react').HTMLAttributes<HTMLDivElement>} props */
 export function Card({ children, className = '', ...attributes }) {
-  return <div {...attributes} className={`card ${className}`}>{children}</div>
+  return <UiCard {...attributes} className={`card ${className}`}>{children}</UiCard>
 }
+
+export { PageHeader }
 
 /** @param {{ id: string, eyebrow: string, title: string, aside?: import('react').ReactNode, children: import('react').ReactNode }} props */
 export function Section({ id, eyebrow, title, aside, children }) {
   return (
     <section id={id} className="scroll-mt-24 space-y-5">
-      <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{eyebrow}</p>
-          <h2 className="mt-1 text-2xl font-bold text-heading">{title}</h2>
-        </div>
-        {aside}
-      </header>
+      <PageHeader eyebrow={eyebrow} title={title} actions={aside} />
       {children}
     </section>
   )
@@ -47,7 +50,8 @@ export function Section({ id, eyebrow, title, aside, children }) {
 /** @param {{ children: import('react').ReactNode, kind: 'verdict' | 'severity' | 'status' }} props */
 export function Chip({ children, kind }) {
   const isClean = kind === 'verdict' && String(children) === 'Clean'
-  return <span className={`badge ${getChipClass(kind, String(children))}`}>{isClean && <Check aria-hidden="true" className="mr-1 h-3 w-3" />}{children}</span>
+  const value = String(children)
+  return <Badge tone={chipTones[kind]?.[value]} icon={isClean ? Check : undefined} className={getChipClass(kind, value)}>{children}</Badge>
 }
 
 /** @param {{ verdict: import('../../data/dashboardMockData').DashboardVerdict }} props */

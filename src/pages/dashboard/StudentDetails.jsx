@@ -10,7 +10,8 @@ import {
   X,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { Card } from '../../components/dashboard/DashboardPrimitives'
+import { Card, PageHeader } from '../../components/dashboard/DashboardPrimitives'
+import { EmptyState, Input, Select } from '../../components/ui/Primitives'
 import { getStudents } from '../../data/api'
 import { mockCourses } from '../../data/mockData'
 import { useAuth } from '../../auth/AuthContext'
@@ -18,7 +19,7 @@ import { useAuth } from '../../auth/AuthContext'
 const statusRank = { 'At risk': 3, 'Needs support': 2, 'On track': 1 }
 const statusStyle = {
   'On track': 'bg-primary/10 text-primary',
-  'Needs support': 'bg-warn/10 text-warn',
+  'Needs support': 'bg-ambiguous/15 text-ink',
   'At risk': 'bg-danger/10 text-danger',
 }
 
@@ -267,14 +268,7 @@ export default function StudentDetails({ courseId }) {
 
   return (
     <div className="space-y-6 pb-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm uppercase tracking-[0.18em] text-muted">DASHBOARD</p>
-          <h1 className="mt-1 text-3xl font-bold text-heading">Student details</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted">Track how each student performs and see whether missed items reflect a learning gap or a content defect.</p>
-        </div>
-        <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-sm text-muted">{course.title}</span>
-      </header>
+      <PageHeader eyebrow="Dashboard" title="Student details" description="Track student performance and distinguish learning gaps from content defects." actions={<span className="rounded-full border border-border bg-surface px-3 py-1.5 text-sm text-muted">{course.title}</span>} />
 
       <section aria-label="Class summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map(([label, value]) => (
@@ -288,26 +282,20 @@ export default function StudentDetails({ courseId }) {
         ))}
       </section>
 
-      <section aria-label="Student filters" className="card flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
-        <label className="relative min-w-0 flex-1">
-          <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or roll no" aria-label="Search students by name or roll number" className="w-full rounded-xl border border-border bg-bg py-2.5 pl-9 pr-3 text-sm text-text placeholder:text-muted/75" />
-        </label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex">
-          <label className="sr-only" htmlFor="student-status-filter">Status</label>
-          <select id="student-status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text">
+      <section aria-label="Student filters" className="grid gap-3 p-4 ui-card lg:grid-cols-[minmax(180px,1fr)_auto_auto_auto] lg:items-end">
+        <Input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or roll no" aria-label="Search students by name or roll number" leadingIcon={Search} />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:contents">
+          <Select id="student-status-filter" label="Status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
             {['All', 'On track', 'Needs support', 'At risk'].map((status) => <option key={status}>{status}</option>)}
-          </select>
-          <label className="sr-only" htmlFor="student-unit-filter">Unit</label>
-          <select id="student-unit-filter" value={unitFilter} onChange={(event) => setUnitFilter(event.target.value)} className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text">
+          </Select>
+          <Select id="student-unit-filter" label="Unit" value={unitFilter} onChange={(event) => setUnitFilter(event.target.value)}>
             <option value="All">All units</option><option value="1">Unit 1</option><option value="2">Unit 2</option><option value="3">Unit 3</option>
-          </select>
-          <label className="sr-only" htmlFor="student-sort">Sort students</label>
-          <select id="student-sort" value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text">
+          </Select>
+          <Select id="student-sort" label="Sort" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
             {['Name', 'Score', 'Risk'].map((sort) => <option key={sort} value={sort}>Sort: {sort}</option>)}
-          </select>
+          </Select>
         </div>
-        <p className="whitespace-nowrap text-sm text-muted" aria-live="polite">{filteredStudents.length} students</p>
+        <p className="whitespace-nowrap self-end pb-2.5 text-sm text-muted" aria-live="polite">{filteredStudents.length} students</p>
       </section>
 
       {loading ? (
@@ -321,10 +309,7 @@ export default function StudentDetails({ courseId }) {
           <button type="button" onClick={() => setRetryKey((value) => value + 1)} className="mt-4 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-fg">Retry</button>
         </Card>
       ) : filteredStudents.length === 0 ? (
-        <Card className="p-8 text-center">
-          <h2 className="font-semibold text-heading">No students match your filters</h2>
-          <button type="button" onClick={clearFilters} className="mt-4 rounded-xl border border-surface-tint bg-surface-tint px-4 py-2 text-sm font-medium text-primary hover:bg-surface-tint/80">Clear filters</button>
-        </Card>
+        <EmptyState title="No students match these filters" description="Adjust the search or clear filters to see the full roster." action={<button type="button" onClick={clearFilters} className="text-sm font-semibold text-primary hover:underline">Clear filters</button>} />
       ) : (
         <>
           <Card className="hidden overflow-hidden md:block">

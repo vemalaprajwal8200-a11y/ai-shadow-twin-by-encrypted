@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ArrowLeft, MailCheck } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { Alert, Button, Card, Input, Select } from '../components/ui/Primitives'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -74,14 +75,14 @@ export default function Login() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-bg p-4 sm:p-6">
-      <section className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-soft sm:p-8" aria-labelledby="auth-title">
-        <Link to="/" className="mb-8 block w-fit leading-tight">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">Faculty AI /</span>
-          <span className="block text-lg font-bold text-heading">Shadow-Twin</span>
+    <main className="grid min-h-screen place-items-center bg-page px-4 py-10 sm:p-6">
+      <Card className="w-full max-w-md p-6 sm:p-8" aria-labelledby="auth-title">
+        <Link to="/" className="mb-7 block w-fit leading-tight">
+          <span className="block text-[11px] font-semibold text-muted">Faculty AI</span>
+          <span className="mt-1 block text-xl font-semibold text-heading">Shadow-Twin</span>
         </Link>
 
-        <h1 id="auth-title" className="mb-2 text-2xl font-bold text-heading">{mode === 'register' ? 'Create your account' : 'Sign in'}</h1>
+        <h1 id="auth-title" className="text-[22px] font-semibold text-heading">{mode === 'register' ? 'Create your account' : 'Sign in'}</h1>
 
         <p className="mb-6 text-sm text-muted">
           {codeSent
@@ -90,11 +91,11 @@ export default function Login() {
               ? 'Choose your account type and enter your details.'
               : 'We will email you a one-time verification code.'}
         </p>
-        {!codeSent && <div className="mb-5 grid grid-cols-2 rounded-xl border border-border bg-bg p-1" role="group" aria-label="Choose sign-in or registration">
-          <button type="button" aria-pressed={mode === 'signin'} onClick={() => changeMode('signin')} className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${mode === 'signin' ? 'bg-accent text-accent-fg' : 'text-muted hover:text-text'}`}>
+        {!codeSent && <div className="mb-5 grid grid-cols-2 rounded-lg border border-border bg-page p-1" role="group" aria-label="Choose sign-in or registration">
+          <button type="button" aria-pressed={mode === 'signin'} onClick={() => changeMode('signin')} className={`min-h-10 rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === 'signin' ? 'bg-surface text-heading shadow-sm' : 'text-muted hover:text-text'}`}>
             Sign in
           </button>
-          <button type="button" aria-pressed={mode === 'register'} onClick={() => changeMode('register')} className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${mode === 'register' ? 'bg-accent text-accent-fg' : 'text-muted hover:text-text'}`}>
+          <button type="button" aria-pressed={mode === 'register'} onClick={() => changeMode('register')} className={`min-h-10 rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === 'register' ? 'bg-surface text-heading shadow-sm' : 'text-muted hover:text-text'}`}>
             Register
           </button>
         </div>}
@@ -102,68 +103,64 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {!codeSent && mode === 'register' && <>
             <div>
-              <label htmlFor="account-type" className="mb-2 block text-sm font-medium text-text">I am registering as</label>
-              <select
+              <Select
                 id="account-type"
+                label="I am registering as"
                 value={accountType}
                 onChange={(event) => {
                   setAccountType(event.target.value)
                   setStudentId('')
                 }}
-                className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text"
               >
                 <option value="student">Student</option>
                 <option value="faculty">Faculty member</option>
-              </select>
+              </Select>
               {accountType === 'faculty' && <p className="mt-2 text-sm text-muted">Faculty access requires administrator approval after email verification.</p>}
             </div>
             <div>
-              <label htmlFor="display-name" className="mb-2 block text-sm font-medium text-text">Full name</label>
-              <input
+              <Input
                 id="display-name"
+                label="Full name"
                 type="text"
                 autoComplete="name"
                 required
                 maxLength={100}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text placeholder:text-muted/75"
                 placeholder="Your name"
               />
             </div>
             {accountType === 'student' && <div>
-              <label htmlFor="student-id" className="mb-2 block text-sm font-medium text-text">USN / Student ID</label>
-              <input
+              <Input
                 id="student-id"
+                label="USN / Student ID"
                 type="text"
                 autoComplete="off"
                 required
                 maxLength={64}
                 value={studentId}
                 onChange={(event) => setStudentId(event.target.value)}
-                className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text placeholder:text-muted/75"
                 placeholder="Your university ID"
               />
             </div>}
           </>}
           <div>
-            <label htmlFor="email" className="mb-2 block text-sm font-medium text-text">Email</label>
-            <input
+            <Input
               id="email"
+              label="Email"
               type="email"
               autoComplete="email"
               required
               value={email}
               readOnly={codeSent}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text placeholder:text-muted/75"
               placeholder="you@university.edu"
             />
           </div>
           {codeSent && <div>
-            <label htmlFor="verification-code" className="mb-2 block text-sm font-medium text-text">Verification code</label>
-            <input
+            <Input
               id="verification-code"
+              label="Verification code"
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -171,19 +168,18 @@ export default function Login() {
               required
               value={code}
               onChange={(event) => setCode(event.target.value.replace(/\s/g, ''))}
-              className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text placeholder:text-muted/75"
               placeholder="Enter the code from your email"
             />
           </div>}
           <div aria-live="polite" aria-atomic="true" className="min-h-5">
-            {!configured && <p className="text-sm text-danger">Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the repository root .env.local file.</p>}
-            {error && <p className="text-sm text-danger">{error}</p>}
-            {message && <p className="text-sm text-success">{message}</p>}
+            {!configured && <Alert variant="warning" title="Supabase is not configured">Set the Supabase project URL and anon key in the root environment file.</Alert>}
+            {error && <Alert variant="danger">{error}</Alert>}
+            {message && <Alert variant="success">{message}</Alert>}
           </div>
-          <button type="submit" disabled={loading || !configured} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-fg transition-colors duration-200 hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70">
+          <Button type="submit" disabled={loading || !configured} className="w-full">
             <MailCheck aria-hidden="true" className="h-4 w-4" />
             {loading ? codeSent ? 'Verifying code...' : 'Sending code...' : codeSent ? 'Verify code' : mode === 'register' ? 'Email me a registration code' : 'Email me a sign-in code'}
-          </button>
+          </Button>
         </form>
 
         {codeSent && <div className="mt-4 flex justify-between text-sm">
@@ -192,7 +188,7 @@ export default function Login() {
         </div>}
 
         <Link to="/" className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-heading"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to About</Link>
-      </section>
+      </Card>
     </main>
   )
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle2, ChevronDown, Copy, MessageSquareText, ShieldAlert, ShieldCheck, XCircle } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import mockApi from '../api/mock'
-import { SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
+import { PageHeader, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
 
 export default function ItemDetailPage() {
   const { itemId } = useParams()
@@ -55,16 +55,12 @@ export default function ItemDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.22em] text-muted">Item review</p>
-          <h2 className="mt-1 text-3xl font-bold text-heading">{item.title}</h2>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader eyebrow="Item review" title={item.title} description="Review the source material, analysis, and faculty decision." actions={
+        <div className="flex flex-wrap items-center gap-2">
           <VerdictChip verdict={item.verdict} />
           <SeverityChip severity={item.severity} />
         </div>
-      </div>
+      } />
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">

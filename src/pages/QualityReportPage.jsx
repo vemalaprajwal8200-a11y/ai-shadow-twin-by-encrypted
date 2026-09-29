@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Download, Filter, TrendingUp } from 'lucide-react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import mockApi from '../api/mock'
-import { SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
+import { PageHeader, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
+import { Button, Select } from '../components/ui/Primitives'
 import { chartPalette } from '../data/chartPalette'
 import { useThemeMode } from '../hooks/useThemeMode'
 
@@ -83,15 +84,9 @@ export default function QualityReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.22em] text-muted">Reporting</p>
-          <h2 className="mt-1 text-3xl font-bold text-heading">Content quality report</h2>
-        </div>
-        <button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-fg hover:bg-primary/90">
+      <PageHeader eyebrow="Reporting" title="Content quality report" description="Review verdict accuracy and tracked content issues." actions={<Button onClick={exportCsv} size="sm">
           <Download className="h-4 w-4" /> CSV export
-        </button>
-      </div>
+      </Button>} />
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="card p-4">
@@ -145,19 +140,19 @@ export default function QualityReportPage() {
 
       <div className="card p-5">
         <div className="mb-4 flex gap-3">
-          <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text">
+          <Select aria-label="Filter by unit" value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
             <option>All</option>
             <option>Unit 1</option>
             <option>Unit 2</option>
             <option>Unit 3</option>
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text">
+          </Select>
+          <Select aria-label="Filter by status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option>All</option>
             <option>Open</option>
             <option>Confirmed</option>
             <option>Dismissed</option>
             <option>Fixed</option>
-          </select>
+          </Select>
         </div>
 
         <div className="overflow-x-auto">

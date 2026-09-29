@@ -15,8 +15,8 @@ export default function About() {
             <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">Faculty AI /</span>
             <span className="block text-lg font-bold text-heading">Shadow-Twin</span>
           </Link>
-          <Link to={accountHref} className="rounded-xl border border-surface-tint bg-surface-tint px-4 py-2 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-surface-tint/80">
-            {isAuthenticated ? 'Open dashboard' : 'Login'}
+          <Link to={accountHref} className="inline-flex min-h-10 items-center rounded-lg border border-border bg-surface px-4 text-sm font-semibold text-text transition-colors hover:bg-page">
+            {isAuthenticated ? 'Open dashboard' : 'Sign in'}
           </Link>
         </nav>
       </header>
@@ -25,12 +25,12 @@ export default function About() {
         <section className="mx-auto flex w-full max-w-4xl items-center">
           <div className="space-y-5">
             <Eyebrow>AI-POWERED ASSESSMENT QUALITY</Eyebrow>
-            <h1 className="max-w-2xl text-4xl font-bold leading-tight text-heading sm:text-5xl">Is the question broken, or is the student behind?</h1>
-            <p className="max-w-2xl text-base leading-7 text-muted">
+            <h1 className="max-w-2xl text-3xl font-semibold leading-tight text-heading">Is the question broken, or is the student behind?</h1>
+            <p className="max-w-2xl text-[15px] leading-7 text-muted">
               Shadow-Twin checks your slides and exam questions to separate real content defects from learning gaps - before your exam paper is finalised.
             </p>
             <div className="flex flex-col gap-3 pt-1 sm:flex-row">
-              <Link to={accountHref} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-fg transition-colors duration-200 hover:bg-primary/90">
+              <Link to={accountHref} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-primary bg-primary px-5 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover hover:text-primary-hover-fg">
                 {isAuthenticated ? 'Open dashboard' : 'Get started'} <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </Link>
             </div>

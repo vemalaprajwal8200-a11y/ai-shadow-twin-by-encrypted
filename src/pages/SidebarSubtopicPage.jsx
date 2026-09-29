@@ -13,7 +13,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Card, Chip, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
+import { Card, Chip, PageHeader, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
+import { Badge, EmptyState } from '../components/ui/Primitives'
 import { chartPalette } from '../data/chartPalette'
 import { dashboardMockItems } from '../data/dashboardMockData'
 import { courseItems, mockCourses, reportRows, settingsConfig } from '../data/mockData'
@@ -156,7 +157,7 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
       ]
       return (
         <div className="space-y-5">
-          <div className="flex justify-end"><span className="rounded-xl border border-accent bg-accent px-3 py-2 text-sm font-medium text-accent-fg">Last analysis: {formatAnalysisDate(currentCourse.lastAnalysis)}</span></div>
+          <div className="flex justify-end"><Badge tone="brand">Last analysis: {formatAnalysisDate(currentCourse.lastAnalysis)}</Badge></div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {stats.map((stat) => <Card key={stat.label} className="p-5"><p className="text-sm text-muted">{stat.label}</p><p className="mt-3 text-3xl font-bold text-heading">{stat.value}</p></Card>)}
           </div>
@@ -235,7 +236,7 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
       ))
       return visibleItems.length
         ? <div className="space-y-3">{visibleItems.map((item) => <Card key={item.id} className="p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><span className="text-xs uppercase tracking-wide text-muted">{item.type} · Unit {item.unit}</span><h3 className="mt-1 font-semibold text-heading"><Link to={`/content/${item.id}`}>{item.title}</Link></h3><p className="mt-2 text-sm text-muted">{item.content}</p></div><div className="flex gap-2"><VerdictChip verdict={item.verdict} /><SeverityChip severity={item.severity} /></div></div></Card>)}</div>
-        : <Card className="p-8 text-center"><h3 className="font-semibold text-heading">No items in this view</h3><p className="mt-2 text-sm text-muted">Choose another course or view all course materials.</p><Link className="mt-4 inline-flex text-primary underline" to="/content">Open course content</Link></Card>
+        : <EmptyState icon={FileText} title="No items in this view" description="Choose another course or view all course materials." action={<Link className="text-sm font-semibold text-primary hover:underline" to="/content">Open course content</Link>} />
     }
 
     if (topic.kind === 'accuracy') {
@@ -275,13 +276,7 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <nav aria-label="Breadcrumb" className="text-sm text-muted"><ol className="flex items-center gap-2"><li><Link to={topic.groupTo} className="hover:text-heading">{topic.groupLabel}</Link></li><li aria-hidden="true">/</li><li aria-current="page">{topic.label}</li></ol></nav>
-          <h2 className="mt-1 text-3xl font-bold text-heading">{topic.label}</h2>
-          <p className="mt-2 max-w-3xl text-sm text-muted">{topic.description}</p>
-        </div>
-      </div>
+      <PageHeader eyebrow={topic.groupLabel} title={topic.label} description={topic.description} />
       {renderContent()}
     </div>
   )

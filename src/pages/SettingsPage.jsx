@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Gauge, SlidersHorizontal, Users } from 'lucide-react'
 import mockApi from '../api/mock'
+import { PageHeader } from '../components/dashboard/DashboardPrimitives'
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState(null)
@@ -30,10 +31,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div>
-        <p className="text-sm uppercase tracking-[0.22em] text-muted">System</p>
-        <h2 className="mt-1 text-3xl font-bold text-heading">Settings</h2>
-      </div>
+      <PageHeader eyebrow="System" title="Settings" description="Configure the analysis behavior for the selected course." />
 
       <div className="card p-5">
         <div className="mb-4 flex items-center gap-2 text-lg font-semibold text-heading">
