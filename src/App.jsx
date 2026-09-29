@@ -10,7 +10,15 @@ import ItemDetailPage from './pages/ItemDetailPage'
 import QualityReportPage from './pages/QualityReportPage'
 import SettingsPage from './pages/SettingsPage'
 import { mockCourses } from './data/mockData'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
+function NotFoundRedirect() {
+  useEffect(() => {
+    window.location.replace('/404.html')
+  }, [])
+
+  return null
+}
 
 function ProtectedRoute({ children }) {
   const isAuthenticated = Boolean(localStorage.getItem('shadow-twin-token'))
@@ -48,6 +56,7 @@ export default function App() {
           <Route path="report" element={<QualityReportPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
+        <Route path="*" element={<NotFoundRedirect />} />
       </Routes>
     </div>
   )
