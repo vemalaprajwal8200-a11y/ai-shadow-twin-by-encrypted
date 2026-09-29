@@ -5,6 +5,11 @@ export default {
   theme: {
     extend: {
       colors: {
+        'primary-light': 'rgb(var(--color-primary-light) / <alpha-value>)',
+        'surface-tint': 'rgb(var(--color-surface-tint) / <alpha-value>)',
+        ink: 'rgb(var(--color-ink) / <alpha-value>)',
+        'ability-gap': 'rgb(var(--color-ability-gap) / <alpha-value>)',
+        ambiguous: 'rgb(var(--color-ambiguous) / <alpha-value>)',
         bg: 'rgb(var(--bg) / <alpha-value>)',
         surface: 'rgb(var(--surface) / <alpha-value>)',
         text: 'rgb(var(--text) / <alpha-value>)',

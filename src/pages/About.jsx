@@ -15,7 +15,7 @@ export default function About() {
             <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">Faculty AI /</span>
             <span className="block text-lg font-bold text-heading">Shadow-Twin</span>
           </Link>
-          <Link to={accountHref} className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-text transition-colors duration-200 hover:border-primary hover:text-heading">
+          <Link to={accountHref} className="rounded-xl border border-surface-tint bg-surface-tint px-4 py-2 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-surface-tint/80">
             {isAuthenticated ? 'Open dashboard' : 'Login'}
           </Link>
         </nav>

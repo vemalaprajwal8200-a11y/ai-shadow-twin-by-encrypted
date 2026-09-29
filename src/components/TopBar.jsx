@@ -12,29 +12,29 @@ export default function TopBar({ course, courses, onCourseChange }) {
   }
 
   return (
-    <header className="flex items-center justify-between gap-2 border-b border-border bg-bg px-3 py-3 backdrop-blur sm:px-5 sm:py-4">
+    <header className="flex items-center justify-between gap-2 border-b border-sidebar bg-sidebar px-3 py-3 text-sidebar-fg backdrop-blur sm:px-5 sm:py-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         {user?.role === 'student' ? (
-          <span className="max-w-[43vw] truncate rounded-xl border border-border bg-bg px-2.5 py-2 text-xs font-medium text-muted sm:max-w-none sm:px-3 sm:text-sm">{selectedCourse?.title}</span>
+          <span className="max-w-[43vw] truncate rounded-xl border border-sidebar-fg/30 bg-sidebar px-2.5 py-2 text-xs font-medium text-sidebar-fg/80 sm:max-w-none sm:px-3 sm:text-sm">{selectedCourse?.title}</span>
         ) : <>
-          <div className="rounded-xl border border-border bg-bg px-3 py-2 text-sm font-medium text-muted">Current course</div>
+          <div className="rounded-xl border border-sidebar-fg/30 bg-sidebar px-3 py-2 text-sm font-medium text-sidebar-fg/80">Current course</div>
           <div className="relative">
-            <select value={course} onChange={(event) => onCourseChange(event.target.value)} className="appearance-none rounded-xl border border-border bg-surface px-4 py-2.5 pr-10 text-sm font-medium text-text">
+            <select value={course} onChange={(event) => onCourseChange(event.target.value)} className="appearance-none rounded-xl border border-sidebar-fg/30 bg-sidebar px-4 py-2.5 pr-10 text-sm font-medium text-sidebar-fg">
               {courses.map((option) => <option key={option.id} value={option.id}>{option.title}</option>)}
             </select>
-            <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-muted" />
+            <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-sidebar-fg" />
           </div>
         </>}
       </div>
 
       <div className="flex items-center gap-2">
-        {user?.role === 'faculty' && <div className="hidden items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-sm text-muted md:flex">
+        {user?.role === 'faculty' && <div className="hidden items-center gap-2 rounded-xl border border-sidebar-fg/30 bg-sidebar px-3 py-2 text-sm text-sidebar-fg/80 md:flex">
           <Search className="h-4 w-4" />
           Search course materials
         </div>}
-        <div className="max-w-[76px] text-right sm:max-w-36"><p className="truncate text-xs font-medium text-text sm:text-sm">{user?.name}</p><span className="inline-flex rounded-full border border-border px-1.5 py-0.5 text-[9px] capitalize leading-none text-muted sm:px-2 sm:text-[10px]">{user?.role}</span></div>
-        {user?.role === 'faculty' && <button type="button" className="rounded-xl border border-border bg-bg p-2 text-text" aria-label="Notifications"><Bell aria-hidden="true" className="h-4 w-4" /></button>}
-        <button type="button" onClick={handleLogout} className="rounded-xl border border-border bg-bg p-2 text-text" aria-label="Log out"><LogOut aria-hidden="true" className="h-4 w-4" /></button>
+        <div className="max-w-[76px] text-right sm:max-w-36"><p className="truncate text-xs font-medium text-sidebar-fg sm:text-sm">{user?.name}</p><span className="inline-flex rounded-full border border-sidebar-fg/30 px-1.5 py-0.5 text-[9px] capitalize leading-none text-sidebar-fg/80 sm:px-2 sm:text-[10px]">{user?.role}</span></div>
+        {user?.role === 'faculty' && <button type="button" className="rounded-xl border border-sidebar-fg/30 bg-sidebar p-2 text-sidebar-fg" aria-label="Notifications"><Bell aria-hidden="true" className="h-4 w-4" /></button>}
+        <button type="button" onClick={handleLogout} className="rounded-xl border border-sidebar-fg/30 bg-sidebar p-2 text-sidebar-fg" aria-label="Log out"><LogOut aria-hidden="true" className="h-4 w-4" /></button>
       </div>
     </header>
   )

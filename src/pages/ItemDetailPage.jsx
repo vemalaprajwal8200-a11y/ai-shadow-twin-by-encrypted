@@ -148,13 +148,13 @@ export default function ItemDetailPage() {
               </div>
             </div>
             <div className="mt-4 flex gap-2">
-              <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-sm font-medium text-text">
+              <button className="inline-flex items-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-primary">
                 <Copy className="h-4 w-4" /> Copy
               </button>
               <button onClick={() => handleDecision('Fixed')} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-fg">
                 <CheckCircle2 className="h-4 w-4" /> Accept
               </button>
-              <button onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl bg-sidebar px-3 py-2 text-sm font-medium text-sidebar-fg">
+              <button onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl bg-surface-tint px-3 py-2 text-sm font-medium text-primary">
                 <XCircle className="h-4 w-4" /> Dismiss
               </button>
             </div>
@@ -166,7 +166,7 @@ export default function ItemDetailPage() {
               <button onClick={() => handleDecision('Confirmed')} className="inline-flex items-center gap-2 rounded-xl bg-danger px-3 py-2 text-sm font-medium text-primary-fg">
                 <ShieldAlert className="h-4 w-4" /> Confirm defect
               </button>
-              <button onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-sm font-medium text-text">
+              <button onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-primary">
                 <ShieldCheck className="h-4 w-4" /> Not a defect
               </button>
             </div>

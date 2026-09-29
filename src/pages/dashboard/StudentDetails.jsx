@@ -185,7 +185,7 @@ function StudentDrawer({ student, students, onClose }) {
 
         <footer className="grid grid-cols-2 gap-3 border-t border-border/60 p-4 sm:p-5">
           <button type="button" disabled title="Coming soon" className="rounded-xl border border-border px-3 py-2.5 text-sm font-medium text-muted disabled:cursor-not-allowed disabled:opacity-60">Message student</button>
-          <button type="button" onClick={exportStudent} className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-medium text-text hover:bg-bg"><ArrowDownToLine aria-hidden="true" className="h-4 w-4" />Export report</button>
+          <button type="button" onClick={exportStudent} className="inline-flex items-center justify-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2.5 text-sm font-medium text-primary hover:bg-surface-tint/80"><ArrowDownToLine aria-hidden="true" className="h-4 w-4" />Export report</button>
         </footer>
       </aside>
     </div>
@@ -323,14 +323,14 @@ export default function StudentDetails({ courseId }) {
       ) : filteredStudents.length === 0 ? (
         <Card className="p-8 text-center">
           <h2 className="font-semibold text-heading">No students match your filters</h2>
-          <button type="button" onClick={clearFilters} className="mt-4 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text hover:bg-bg">Clear filters</button>
+          <button type="button" onClick={clearFilters} className="mt-4 rounded-xl border border-surface-tint bg-surface-tint px-4 py-2 text-sm font-medium text-primary hover:bg-surface-tint/80">Clear filters</button>
         </Card>
       ) : (
         <>
           <Card className="hidden overflow-hidden md:block">
             <div className="max-h-[calc(100vh-25rem)] overflow-auto">
               <table className="w-full min-w-[1050px] text-left text-sm" aria-label="Student performance roster">
-                <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wide text-muted shadow-[0_1px_0_rgb(var(--border)_/_var(--border-opacity))]">
+                <thead className="sticky top-0 z-10 bg-surface-tint text-xs uppercase tracking-wide text-ink shadow-[0_1px_0_rgb(var(--border)_/_0.5)] dark:bg-primary dark:text-surface-tint">
                   <tr>
                     <th scope="col" className="px-4 py-3">Student</th>
                     <th scope="col" className="px-3 py-3">Overall</th>
@@ -345,7 +345,7 @@ export default function StudentDetails({ courseId }) {
                 </thead>
                 <tbody className="divide-y divide-border/40">
                   {filteredStudents.slice(0, visibleCount).map((student) => (
-                    <tr key={student.id} tabIndex={0} aria-label={`Open details for ${student.name}`} onClick={() => openStudent(student)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openStudent(student) } }} className="cursor-pointer transition-colors hover:bg-bg focus-visible:bg-bg">
+                    <tr key={student.id} tabIndex={0} aria-label={`Open details for ${student.name}`} onClick={() => openStudent(student)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openStudent(student) } }} className="cursor-pointer transition-colors hover:bg-surface-tint/40 focus-visible:bg-surface-tint/40 dark:hover:bg-primary-light/20 dark:focus-visible:bg-primary-light/20">
                       <th scope="row" className="px-4 py-3 font-medium"><StudentIdentity student={student} /></th>
                       <td className="px-3 py-3"><ScoreBar score={student.overallScore} label={`${student.name} overall score`} /></td>
                       {student.unitScores.map((score, index) => <td key={index} className="px-3 py-3 tabular-nums text-muted">{score}%</td>)}
@@ -366,7 +366,7 @@ export default function StudentDetails({ courseId }) {
             ))}
           </div>
 
-          {visibleCount < filteredStudents.length && <div className="text-center"><button type="button" onClick={() => setVisibleCount((count) => count + 10)} className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text hover:bg-surface">Show more</button></div>}
+          {visibleCount < filteredStudents.length && <div className="text-center"><button type="button" onClick={() => setVisibleCount((count) => count + 10)} className="rounded-xl border border-surface-tint bg-surface-tint px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface-tint/80">Show more</button></div>}
         </>
       )}
 

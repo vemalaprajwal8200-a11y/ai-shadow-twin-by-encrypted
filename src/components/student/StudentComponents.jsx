@@ -4,7 +4,7 @@ import { Card } from '../dashboard/DashboardPrimitives'
 
 const statusStyle = {
   'On track': 'bg-primary/10 text-primary',
-  'Needs support': 'bg-warn/10 text-warn',
+  'Needs support': 'bg-warn/20 text-ink dark:bg-warn dark:text-ink',
   'At risk': 'bg-danger/10 text-danger',
 }
 
@@ -16,8 +16,8 @@ export function StudentStatusPill({ status }) {
 
 const outcomeStyles = {
   content_defect_confirmed: 'border-danger/30 bg-danger/10 text-danger',
-  ability_gap_confirmed: 'border-warn/30 bg-warn/10 text-warn',
-  genuine_miss: 'border-warn/30 bg-warn/10 text-warn',
+  ability_gap_confirmed: 'border-ability-gap/40 bg-ability-gap/10 text-ink dark:bg-surface dark:text-sidebar-fg',
+  genuine_miss: 'border-warn/30 bg-warn/20 text-ink dark:bg-warn dark:text-ink',
 }
 
 const outcomeLabels = {

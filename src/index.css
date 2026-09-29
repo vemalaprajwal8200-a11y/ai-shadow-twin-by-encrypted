@@ -3,30 +3,43 @@
 @tailwind utilities;
 
 :root {
-  --bg: 243 255 246;
-  --surface: 255 255 255;
-  --text: 37 61 44;
-  --heading: 37 61 44;
-  --muted: 37 61 44;
+  --color-primary: 46 111 64;
+  --color-primary-light: 104 186 127;
+  --color-surface-tint: 207 255 220;
+  --color-ink: 37 61 44;
+  --color-page: 244 255 247;
+  --color-white: 255 255 255;
+  --color-muted: 81 99 85;
+  --color-ability-gap: 59 125 216;
+  --color-danger: 192 57 43;
+  --color-danger-dark: 240 138 127;
+  --color-ambiguous: 224 160 48;
+  --color-grid: 104 186 127;
+  --bg: var(--color-page);
+  --surface: var(--color-white);
+  --text: var(--color-ink);
+  --heading: var(--color-ink);
+  --muted: var(--color-muted);
+  --border: var(--color-surface-tint);
+  --primary: var(--color-primary);
+  --primary-fg: var(--color-white);
+  --accent: var(--color-primary-light);
+  --accent-fg: var(--color-ink);
+  --sidebar: var(--color-ink);
+  --sidebar-fg: var(--color-surface-tint);
+  --focus-guard: var(--color-page);
+  --danger: var(--color-danger);
+  --warn: var(--color-ambiguous);
+  --ability-gap: var(--color-ability-gap);
+  --shadow: var(--color-ink);
   --muted-opacity: 0.72;
-  --border: 37 61 44;
   --border-opacity: 0.14;
-  --track: 37 61 44;
+  --track: var(--color-ink);
   --track-opacity: 0.14;
-  --primary: 46 111 64;
-  --primary-fg: 255 255 255;
-  --primary-hover: 37 61 44;
-  --primary-hover-fg: 255 255 255;
-  --selection: 104 186 127;
-  --accent: 46 111 64;
-  --accent-fg: 255 255 255;
-  --sidebar: 46 111 64;
-  --sidebar-fg: 207 255 220;
-  --focus: 46 111 64;
-  --focus-guard: 243 255 246;
-  --danger: 158 40 31;
-  --warn: 120 66 0;
-  --shadow: 37 61 44;
+  --primary-hover: var(--color-ink);
+  --primary-hover-fg: var(--color-white);
+  --selection: var(--color-primary-light);
+  --focus: var(--color-primary);
   color: rgb(var(--text));
   background-color: rgb(var(--bg));
   color-scheme: light;
@@ -36,28 +49,31 @@
 }
 
 .dark {
-  --bg: 28 45 33;
-  --surface: 37 61 44;
-  --text: 207 255 220;
-  --heading: 207 255 220;
-  --muted: 207 255 220;
+  --bg: var(--color-ink);
+  --surface: var(--color-primary);
+  --text: var(--color-surface-tint);
+  --heading: var(--color-surface-tint);
+  --muted: var(--color-surface-tint);
+  --border: var(--color-primary-light);
+  --primary-fg: var(--color-white);
+  --accent-fg: var(--color-ink);
+  --sidebar: var(--color-ink);
+  --sidebar-fg: var(--color-surface-tint);
+  --focus-guard: var(--color-primary);
+  --danger: var(--color-danger-dark);
   --muted-opacity: 0.72;
-  --border: 207 255 220;
-  --border-opacity: 0.12;
-  --track: 207 255 220;
+  --border: var(--color-primary-light);
+  --border-opacity: 0.3;
+  --track: var(--color-surface-tint);
   --track-opacity: 0.12;
-  --primary: 104 186 127;
-  --primary-fg: 37 61 44;
-  --primary-hover: 207 255 220;
-  --primary-hover-fg: 37 61 44;
-  --accent: 104 186 127;
-  --accent-fg: 37 61 44;
-  --sidebar: 46 111 64;
-  --sidebar-fg: 207 255 220;
-  --focus: 207 255 220;
-  --focus-guard: 28 45 33;
-  --danger: 255 137 125;
-  --warn: 250 204 120;
+  --primary: var(--color-primary-light);
+  --primary-hover: var(--color-surface-tint);
+  --primary-hover-fg: var(--color-ink);
+  --accent: var(--color-primary-light);
+  --sidebar: var(--color-ink);
+  --focus: var(--color-surface-tint);
+  --warn: var(--color-ambiguous);
+  --ability-gap: var(--color-ability-gap);
   --shadow: 0 0 0;
   color-scheme: dark;
 }
@@ -132,7 +148,7 @@ body {
 }
 
 .card {
-  @apply rounded-2xl border border-border bg-surface shadow-soft;
+  @apply rounded-2xl border border-surface-tint/60 bg-surface shadow-soft;
 }
 
 .sidebar-link {
@@ -159,6 +175,28 @@ body {
 
 .badge {
   @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+}
+
+thead {
+  background-color: rgb(var(--color-surface-tint));
+  color: rgb(var(--color-ink));
+}
+
+.dark thead {
+  background-color: rgb(var(--color-primary));
+  color: rgb(var(--color-surface-tint));
+}
+
+tbody tr {
+  transition: background-color 150ms ease;
+}
+
+tbody tr:hover {
+  background-color: rgb(var(--color-surface-tint) / 0.4);
+}
+
+.dark tbody tr:hover {
+  background-color: rgb(var(--color-primary-light) / 0.2);
 }
 
 ::selection {

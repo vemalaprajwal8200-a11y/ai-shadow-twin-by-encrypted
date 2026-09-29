@@ -81,7 +81,7 @@ export default function MyDetails() {
 
       <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div><p className="text-xs font-semibold uppercase tracking-wide text-muted">NEXT STEP</p><h2 className="mt-1 font-semibold text-heading">Revise Unit {student.unitScores.indexOf(Math.min(...student.unitScores)) + 1}: {recommendation}</h2></div>
-        <Link to="/topics/dashboard/plan" className="inline-flex shrink-0 items-center justify-center rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text hover:bg-bg">Open study plan</Link>
+        <Link to="/topics/dashboard/plan" className="inline-flex shrink-0 items-center justify-center rounded-xl border border-surface-tint bg-surface-tint px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface-tint/80">Open study plan</Link>
       </Card>
     </div>
   )

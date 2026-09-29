@@ -1,15 +1,15 @@
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, Check } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const chipClasses = {
   verdict: {
     'Content defect': 'bg-danger/10 text-danger',
-    'Ability gap': 'bg-warn/10 text-warn',
-    Clean: 'bg-primary text-primary-fg',
+    'Ability gap': 'bg-ability-gap/10 text-ink ring-1 ring-ability-gap/50',
+    Clean: 'bg-accent text-accent-fg',
   },
   severity: {
     High: 'bg-danger/10 text-danger',
-    Medium: 'bg-warn/10 text-warn',
+    Medium: 'bg-warn/25 text-ink',
     Low: 'bg-primary text-primary-fg',
   },
   status: {
@@ -46,7 +46,8 @@ export function Section({ id, eyebrow, title, aside, children }) {
 
 /** @param {{ children: import('react').ReactNode, kind: 'verdict' | 'severity' | 'status' }} props */
 export function Chip({ children, kind }) {
-  return <span className={`badge ${getChipClass(kind, String(children))}`}>{children}</span>
+  const isClean = kind === 'verdict' && String(children) === 'Clean'
+  return <span className={`badge ${getChipClass(kind, String(children))}`}>{isClean && <Check aria-hidden="true" className="mr-1 h-3 w-3" />}{children}</span>
 }
 
 /** @param {{ verdict: import('../../data/dashboardMockData').DashboardVerdict }} props */

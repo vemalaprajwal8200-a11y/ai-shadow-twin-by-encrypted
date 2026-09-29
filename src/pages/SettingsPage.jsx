@@ -66,7 +66,7 @@ export default function SettingsPage() {
                 <button
                   key={persona}
                   type="button"
-                  className="rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium text-text transition hover:border-primary hover:text-primary"
+                  className="rounded-full border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-primary transition hover:border-primary hover:bg-surface-tint/80"
                 >
                   {persona}
                 </button>
