@@ -58,6 +58,7 @@ export const sidebarNavGroups = [
       { id: 'settings-runs', label: 'Runs per item', to: '/topics/settings/runs', kind: 'runs', description: 'Adjust how many twin runs are used to analyse each item.' },
       { id: 'settings-personas', label: 'Personas', to: '/topics/settings/personas', kind: 'personas', description: 'Choose the learner personas used during analysis.' },
       { id: 'settings-confidence', label: 'Confidence threshold', to: '/topics/settings/confidence', kind: 'confidence', description: 'Set the confidence level used to surface a review flag.' },
+      { id: 'settings-faculty-profile', label: 'My profile', to: '/faculty/profile', kind: 'faculty-profile', description: 'Edit your faculty display name and account details.' },
     ],
   },
 ]

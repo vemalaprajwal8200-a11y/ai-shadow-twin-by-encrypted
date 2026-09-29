@@ -18,6 +18,7 @@ const StudyPlan = lazy(() => import('./pages/student/StudyPlan'))
 const StudentSettings = lazy(() => import('./pages/student/StudentSettings'))
 const StudentCourseContent = lazy(() => import('./pages/student/StudentCourseContent'))
 const SidebarSubtopicPage = lazy(() => import('./pages/SidebarSubtopicPage'))
+const FacultyProfile = lazy(() => import('./pages/faculty/FacultyProfile'))
 import { sidebarNavSubtopics } from './components/sidebarNavConfig'
 import { mockCourses } from './data/mockData'
 import { useAuth } from './auth/AuthContext'
@@ -78,7 +79,8 @@ function AppRoutes() {
           <Route path="content/:itemId" element={<ItemDetailPage />} />
           <Route path="report" element={<QualityReportPage />} />
           <Route path="settings" element={<SettingsPage />} />
-          {sidebarNavSubtopics.filter((topic) => topic.kind !== 'student-details' && topic.kind !== 'content').map((topic) => (
+          <Route path="faculty/profile" element={<FacultyProfile />} />
+          {sidebarNavSubtopics.filter((topic) => topic.kind !== 'student-details' && topic.kind !== 'content' && topic.kind !== 'faculty-profile').map((topic) => (
             <Route key={topic.id} path={topic.to.replace(/^\//, '')} element={<SidebarSubtopicPage topic={topic} courseId={courseId} />} />
           ))}
         </Route>

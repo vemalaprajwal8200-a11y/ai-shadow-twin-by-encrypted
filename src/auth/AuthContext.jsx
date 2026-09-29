@@ -22,9 +22,9 @@ async function getProfileUser(client, authUser) {
     name: metadata.display_name || data?.display_name || authUser.email?.split('@')[0] || 'User',
     email: authUser.email || '',
     role: data?.role === 'faculty' ? 'faculty' : 'student',
-    requestedRole: data?.role === 'faculty'
+    requestedRole: data?.role === 'faculty' || metadata.requested_role === 'faculty'
       ? 'faculty'
-      : metadata.requested_role === 'faculty' ? 'faculty' : 'student',
+      : 'student',
     studentId: metadata.student_id || data?.student_id || undefined,
     semester: metadata.semester || '',
     section: metadata.section || '',

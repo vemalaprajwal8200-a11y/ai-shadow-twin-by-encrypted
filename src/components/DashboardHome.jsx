@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import FacultyRoster from '../pages/dashboard/StudentDetails'
-import MyDetails from '../pages/student/MyDetails'
 import { Toast } from './ui/Primitives'
+
+const FacultyDashboard = lazy(() => import('../pages/faculty/FacultyDashboard'))
+const MyDetails = lazy(() => import('../pages/student/MyDetails'))
 
 /** @param {{ courseId: string }} props */
 export default function DashboardHome({ courseId }) {
@@ -14,7 +15,7 @@ export default function DashboardHome({ courseId }) {
 
   useEffect(() => {
     if (location.state?.facultyAccessPending) {
-      setNotice('Email verified. Faculty access is pending administrator approval; your account has student access for now.')
+      setNotice('Faculty access is pending administrator approval. Your account has student access for now.')
     } else if (location.state?.accessDenied) {
       const targetRole = location.state.intendedRole || 'faculty'
       setNotice(`That area is for ${targetRole === 'faculty' ? 'faculty' : 'students'}.`)
@@ -32,7 +33,9 @@ export default function DashboardHome({ courseId }) {
 
   return (
     <>
-      {user?.role === 'student' ? <MyDetails /> : <FacultyRoster courseId={courseId} />}
+      <Suspense fallback={<div className="grid min-h-[40vh] place-items-center text-muted">Loading...</div>}>
+        {user?.role === 'faculty' ? <FacultyDashboard courseId={courseId} /> : <MyDetails />}
+      </Suspense>
       <Toast message={notice} onClose={() => setNotice('')} />
     </>
   )
