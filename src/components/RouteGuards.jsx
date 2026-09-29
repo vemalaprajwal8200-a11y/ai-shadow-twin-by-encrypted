@@ -15,7 +15,9 @@ export function ProtectedRoute({ children }) {
 
 export function LoginRoute() {
   const { user, isAuthenticated, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <div className="grid min-h-screen place-items-center bg-bg text-sm text-muted" role="status">Checking your session...</div>
+  if (location.search.includes('recovery=')) return <Login />
   if (!isAuthenticated) return <Login />
 
   const facultyAccessPending = user?.requestedRole === 'faculty' && user.role !== 'faculty'

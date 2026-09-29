@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { getSupabaseClient, isSupabaseConfigured } from '../api/supabase'
 
 const AuthContext = createContext(null)
+const EMAIL_CONFIRMATION_URL = 'https://ai-shadow-twin-by-encrypted.vercel.app/login'
+const PASSWORD_RECOVERY_URL = 'https://ai-shadow-twin-by-encrypted.vercel.app/login?recovery=complete'
 
 async function getProfileUser(client, authUser) {
   const { data, error } = await client
@@ -93,26 +95,60 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(user),
     configured: isSupabaseConfigured(),
-    async sendMagicLink(
-      email,
-      { shouldCreateUser = false, displayName = '', studentId = '', requestedRole = 'student' } = {},
-    ) {
+    async registerWithEmail(email, password, { displayName = '', studentId = '', requestedRole = 'student' } = {}) {
       const client = getSupabaseClient()
-      const { error } = await client.auth.signInWithOtp({
+      const { data, error } = await client.auth.signUp({
         email: email.trim(),
+        password,
         options: {
-          shouldCreateUser,
-          emailRedirectTo: `${window.location.origin}/login`,
-          ...(shouldCreateUser && {
-            data: {
-              display_name: displayName.trim(),
-              student_id: studentId.trim(),
-              requested_role: requestedRole === 'faculty' ? 'faculty' : 'student',
-            },
-          }),
+          emailRedirectTo: EMAIL_CONFIRMATION_URL,
+          data: {
+            display_name: displayName.trim(),
+            student_id: studentId.trim(),
+            requested_role: requestedRole === 'faculty' ? 'faculty' : 'student',
+          },
         },
       })
       if (error) throw error
+      if (!data.user) throw new Error('Account registration did not return a user.')
+      if (data.user.identities?.length === 0) {
+        throw new Error('An account with this email may already exist. Try signing in instead.')
+      }
+      if (!data.session) return { requiresEmailConfirmation: true }
+
+      const profileUser = await getProfileUser(client, data.user)
+      setUser(profileUser)
+      return { user: profileUser }
+    },
+    async loginWithEmail(email, password) {
+      const client = getSupabaseClient()
+      const { data, error } = await client.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
+      if (error) throw error
+      if (!data.user) throw new Error('Sign-in did not return an account.')
+
+      const profileUser = await getProfileUser(client, data.user)
+      setUser(profileUser)
+      return profileUser
+    },
+    async sendPasswordReset(email) {
+      const client = getSupabaseClient()
+      const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: PASSWORD_RECOVERY_URL,
+      })
+      if (error) throw error
+    },
+    async updatePassword(password) {
+      const client = getSupabaseClient()
+      const { data, error } = await client.auth.updateUser({ password })
+      if (error) throw error
+      if (!data.user) throw new Error('Could not update your password.')
+
+      const profileUser = await getProfileUser(client, data.user)
+      setUser(profileUser)
+      return profileUser
     },
     async updateStudentDetails({ name, studentId, semester, section }) {
       const client = getSupabaseClient()
