@@ -1,4 +1,5 @@
 import { courseItems } from '../data/mockData'
+import { API_BASE_URL } from './api'
 
 const CHATS_STORAGE_KEY = 'ai_shadow_twin_chats'
 const ACTIVE_CHAT_KEY = 'ai_shadow_twin_active_chat'
@@ -190,6 +191,91 @@ function generateOfflineMockResponse(query, courseId, unitId, persona) {
   return { replyText, itemCards, sources }
 }
 
+function userMessageForChatStatus(status, fallback) {
+  if (status === 422) return fallback || 'That message could not be sent. Please check it and try again.'
+  if (status === 503) return fallback || 'Chat is not configured on the server.'
+  if (status === 502) return fallback || 'The assistant is temporarily unavailable. Please try again.'
+  return fallback || 'API endpoint unavailable.'
+}
+
+/**
+ * POST /chat on the FastAPI backend. Keys never leave the server.
+ */
+export async function sendChatMessage({ message, history = [], provider, signal } = {}) {
+  const timeoutController = new AbortController()
+  const timeout = window.setTimeout(() => timeoutController.abort(), 30000)
+  const abortRequest = () => timeoutController.abort()
+  signal?.addEventListener('abort', abortRequest, { once: true })
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        message,
+        history,
+        ...(provider ? { provider } : {}),
+      }),
+      signal: timeoutController.signal,
+    })
+  } catch (err) {
+    if (timeoutController.signal.aborted && !signal?.aborted) {
+      const error = new Error('The chat service timed out. Please try again.')
+      error.code = 'TIMEOUT'
+      if (import.meta.env.DEV) console.error('Chat request timed out:', err)
+      throw error
+    }
+    if (err?.name === 'AbortError') throw err
+    if (import.meta.env.DEV) console.error('Chat request failed:', err)
+    const error = new Error('Could not reach the chat service. Check that the API is running.')
+    error.code = 'NETWORK_ERROR'
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
+    signal?.removeEventListener('abort', abortRequest)
+  }
+
+  const raw = await response.text()
+  let parsed = {}
+  try {
+    parsed = raw ? JSON.parse(raw) : {}
+  } catch {
+    parsed = {}
+  }
+
+  if (!response.ok) {
+    const err = new Error(userMessageForChatStatus(response.status, parsed.error))
+    err.code =
+      response.status === 422
+        ? 'VALIDATION_ERROR'
+        : response.status === 503
+          ? 'NOT_CONFIGURED'
+          : response.status === 502
+            ? 'PROVIDER_UNAVAILABLE'
+            : 'API_ERROR'
+    err.status = response.status
+    throw err
+  }
+
+  return {
+    reply: parsed.reply || parsed.text || '',
+    provider: parsed.provider || null,
+    model: parsed.model || null,
+    latencyMs: parsed.latencyMs ?? null,
+  }
+}
+
+function historyFromMessages(messages) {
+  const turns = Array.isArray(messages) ? messages : []
+  const last = turns[turns.length - 1]
+  const message = last?.content || ''
+  const history = turns.slice(0, -1)
+    .filter((turn) => turn?.role === 'user' || turn?.role === 'assistant')
+    .map((turn) => ({ role: turn.role, content: turn.content || '' }))
+    .slice(-20)
+  return { message, history }
+}
+
 /**
  * Sends a message stream to /api/chat endpoint with fallback
  */
@@ -205,76 +291,27 @@ export async function sendChatMessageStream({
   onError,
 }) {
   try {
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, courseId, unitId, persona, role }),
-      signal,
-    })
-
-    if (!response.ok) {
-      const errText = await response.text()
-      let parsedError = 'API endpoint unavailable.'
-      let parsedCode = 'API_ERROR'
-      try {
-        const json = JSON.parse(errText)
-        if (json.error) parsedError = json.error
-        if (json.code) parsedCode = json.code
-      } catch {
-        if (errText) parsedError = errText
-      }
-      const err = new Error(parsedError)
-      err.code = parsedCode
-      throw err
-    }
-
-    const contentType = response.headers.get('content-type') || ''
-    if (contentType.includes('text/event-stream') || contentType.includes('text/plain') || response.body) {
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let fullText = ''
-      let accumulatedItemCards = []
-      let accumulatedSources = []
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        
-        // Parse SSE format "data: {...}\n\n" or raw text stream
-        const lines = chunk.split('\n')
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6).trim()
-            if (dataStr === '[DONE]') continue
-            try {
-              const parsed = JSON.parse(dataStr)
-              if (parsed.text) {
-                fullText += parsed.text
-                onToken(parsed.text)
-              }
-              if (parsed.itemCards) accumulatedItemCards = parsed.itemCards
-              if (parsed.sources) accumulatedSources = parsed.sources
-            } catch {
-              fullText += dataStr
-              onToken(dataStr)
-            }
-          } else if (line.trim() && !line.startsWith(':')) {
-            fullText += line
-            onToken(line)
-          }
-        }
-      }
-
-      onComplete({ text: fullText, itemCards: accumulatedItemCards, sources: accumulatedSources })
-      return
-    }
-
-    const data = await response.json()
-    onComplete({ text: data.text || '', itemCards: data.itemCards || [], sources: data.sources || [] })
+    const { message, history } = historyFromMessages(messages)
+    const data = await sendChatMessage({ message, history, signal })
+    const text = data.reply || ''
+    if (text) onToken(text)
+    onComplete({ text, itemCards: [], sources: [] })
+    return
   } catch (error) {
     if (error.name === 'AbortError') {
+      return
+    }
+    if (
+      error.code === 'NETWORK_ERROR'
+      || error.code === 'TIMEOUT'
+      || error.code === 'VALIDATION_ERROR'
+      || error.code === 'NOT_CONFIGURED'
+      || error.code === 'PROVIDER_UNAVAILABLE'
+      || error.status === 422
+      || error.status === 502
+      || error.status === 503
+    ) {
+      onError?.(error)
       return
     }
     console.warn('Backend API failed, using offline fallback. Code:', error.code, '| Message:', error.message)

@@ -13,6 +13,7 @@ import {
   setActiveChatId,
   updateChatSession,
 } from '../../services/chat'
+import { checkApiHealth } from '../../services/api'
 
 /**
  * @param {{
@@ -42,12 +43,18 @@ export default function ChatInterface({
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
   const [offlineError, setOfflineError] = useState(null)
+  const [isApiHealthy, setIsApiHealthy] = useState(false)
   const [sources, setSources] = useState([])
 
   const abortControllerRef = useRef(null)
   const messagesEndRef = useRef(null)
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
+  const lastFailedMessageRef = useRef(null)
+
+  const refreshApiHealth = async () => {
+    setIsApiHealthy(await checkApiHealth())
+  }
 
   // Load chats on mount
   useEffect(() => {
@@ -63,6 +70,12 @@ export default function ChatInterface({
     setActiveChat(current)
     setPersona(current.persona || 'Beginner')
     setUnitId(current.unitId || 'all')
+  }, [])
+
+  useEffect(() => {
+    refreshApiHealth()
+    const interval = window.setInterval(refreshApiHealth, 15000)
+    return () => window.clearInterval(interval)
   }, [])
 
   // Auto-scroll to bottom of messages
@@ -151,7 +164,7 @@ export default function ChatInterface({
   }
 
   // Send Message Logic
-  const handleSendMessage = async (textToSend = input) => {
+  const handleSendMessage = async (textToSend = input, retrying = false) => {
     const trimmed = textToSend.trim()
     if (!trimmed || isStreaming || !activeChat) return
 
@@ -165,13 +178,13 @@ export default function ChatInterface({
     }
 
     // Auto-title chat on first message
-    if (activeChat.messages.length === 0) {
+    if (!retrying && activeChat.messages.length === 0) {
       const autoTitle = trimmed.length > 32 ? `${trimmed.substring(0, 32)}...` : trimmed
       renameChatSession(activeChat.id, autoTitle)
     }
 
-    const nextMessages = [...activeChat.messages, userMessage]
-    updateCurrentChatMessages(nextMessages)
+    const nextMessages = retrying ? activeChat.messages : [...activeChat.messages, userMessage]
+    if (!retrying) updateCurrentChatMessages(nextMessages)
 
     setInput('')
     setAttachments([])
@@ -222,6 +235,7 @@ export default function ChatInterface({
         } else {
           // Successful live reply — clear any stale offline banner
           setOfflineError(null)
+          lastFailedMessageRef.current = null
         }
       },
       onError: (err) => {
@@ -230,6 +244,8 @@ export default function ChatInterface({
         abortControllerRef.current = null
         const codeStr = err.code ? ` [${err.code}]` : ''
         setOfflineError(`${err.message || 'Twin API is unavailable.'}${codeStr}`)
+        lastFailedMessageRef.current = trimmed
+        refreshApiHealth()
       },
     })
   }
@@ -312,7 +328,7 @@ export default function ChatInterface({
               <h2 className="font-bold text-lg text-heading leading-none">Shadow-Twin</h2>
               <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                {isStreaming ? 'Thinking...' : offlineError ? 'Offline Mode' : 'Ready'}
+                {isStreaming ? 'Thinking...' : isApiHealthy ? 'Ready' : 'Offline Mode'}
               </span>
             </div>
             <p className="mt-0.5 text-xs text-muted">Course AI co-pilot • {courseId}</p>
@@ -364,7 +380,10 @@ export default function ChatInterface({
           </div>
           <button
             type="button"
-            onClick={() => handleSendMessage()}
+            onClick={async () => {
+              await refreshApiHealth()
+              if (lastFailedMessageRef.current) handleSendMessage(lastFailedMessageRef.current, true)
+            }}
             className="inline-flex items-center gap-1 rounded-lg bg-amber-200 dark:bg-amber-800 px-2.5 py-1 font-semibold text-amber-900 dark:text-amber-100 hover:bg-amber-300 transition"
           >
             <RefreshCcw className="h-3 w-3" />

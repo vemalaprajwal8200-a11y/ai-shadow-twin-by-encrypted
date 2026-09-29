@@ -6,10 +6,11 @@ data/
 uploads/
 .vercel/
 .aws/
+test.env
 .env
 .env.*
 env.local
 *.env
+!test.env.example
 !.env.example
-.env.example
 app/env.example

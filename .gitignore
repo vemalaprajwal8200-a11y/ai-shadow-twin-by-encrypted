@@ -2,11 +2,14 @@ node_modules
 dist
 .vite
 .DS_Store
+test.env
 .env
 .env.*
 .env.local
 *.env
 !.env.example
+!test.env.example
+!backend/test.env.example
 backend/.env.example
 backend/env.local
 .vercel/

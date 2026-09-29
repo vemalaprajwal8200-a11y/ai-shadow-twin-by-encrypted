@@ -1,0 +1,1 @@
+{"error":"API key not configured. Set GEMINI_API_KEY in Vercel → Settings → Environment Variables.","code":"MISSING_API_KEY"}

@@ -1,4 +1,4 @@
-fastapi
+fastapi[standard]
 uvicorn
 python-pptx
 pydantic
@@ -8,4 +8,5 @@ pypdf
 mangum
 requests
 supabase
-openai
+openai==3.8.0
+google-genai==2.25.0

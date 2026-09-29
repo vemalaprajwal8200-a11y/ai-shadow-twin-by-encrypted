@@ -1,17 +1,24 @@
 """FastAPI endpoints for local course ingestion and student-twin analysis."""
 
 import os
+import sys
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, UploadFile
+_BACKEND_ROOT = Path(__file__).resolve().parents[1]
+_BACKEND_ROOT_STR = str(_BACKEND_ROOT)
+if _BACKEND_ROOT_STR not in sys.path:
+    sys.path.insert(0, _BACKEND_ROOT_STR)
+
+from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 from pydantic import BaseModel
 
+from app.chat_api import handle_chat_health, handle_post_chat
 from app.auth import (
     get_current_user,
     get_faculty_invite_code,
@@ -38,19 +45,26 @@ from app.storage_supabase import StorageError
 from app.signals import compute_signals
 from app.twin import run_item_full, twin_run
 
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:3000,http://127.0.0.1:3000,"
+    "http://localhost:5173,http://127.0.0.1:5173,"
+    "http://localhost:5174,http://127.0.0.1:5174,"
+    "http://localhost:4173,http://127.0.0.1:4173"
+)
+
+
+def cors_allow_origins() -> list[str]:
+    configured = os.getenv("CORS_ALLOW_ORIGINS", DEFAULT_CORS_ORIGINS)
+    return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+
 app = FastAPI(title="AI Shadow-Twin API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=cors_allow_origins(),
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
     allow_credentials=True,
 )
 UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads"
@@ -77,6 +91,17 @@ def validate_ai_settings() -> None:
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/chat/")
+@app.post("/chat")
+async def post_chat(request: Request):
+    return await handle_post_chat(request)
+
+
+@app.get("/chat/health")
+def chat_health(deep: bool = Query(default=False)):
+    return handle_chat_health(deep)
 
 
 class InviteCodeRequest(BaseModel):
