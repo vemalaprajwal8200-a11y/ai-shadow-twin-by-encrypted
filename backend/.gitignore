@@ -10,3 +10,4 @@ uploads/
 .env.*
 *.env
 !.env.example
+.env.example
