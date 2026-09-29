@@ -4,3 +4,11 @@ dist
 .DS_Store
 .env
 .env.*
+*.env
+!.env.example
+.vercel/
+.aws/
+data/
+uploads/
+venv/
+__pycache__/

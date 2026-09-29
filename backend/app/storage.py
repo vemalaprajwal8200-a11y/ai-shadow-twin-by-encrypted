@@ -1,107 +1,74 @@
-"""Small local JSON storage layer that can later be replaced by DynamoDB."""
+"""Choose local JSON or Supabase storage and keep the public API stable."""
 
-import json
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 from app.models import Finding, Item, Run
 
-STORE_PATH = Path(__file__).resolve().parents[1] / "data" / "store.json"
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
+STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()
+if STORAGE_BACKEND not in {"local", "supabase"}:
+    raise RuntimeError("STORAGE_BACKEND must be either 'local' or 'supabase'.")
 
-def _load() -> dict:
-    if not STORE_PATH.exists():
-        return {"items": {}, "runs": [], "findings": [], "courses": {}}
-    data = json.loads(STORE_PATH.read_text(encoding="utf-8"))
-    data.setdefault("items", {})
-    data.setdefault("runs", [])
-    data.setdefault("findings", [])
-    data.setdefault("courses", {})
-    return data
+if STORAGE_BACKEND == "supabase":
+    from app import storage_supabase as _backend
 
-
-def _save(data: dict) -> None:
-    STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STORE_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    _backend.initialize()
+else:
+    from app import storage_local as _backend
 
 
 def save_items(items: list[Item]) -> None:
-    data = _load()
-    for item in items:
-        data["items"][item.itemId] = item.model_dump()
-    if items:
-        course_id = items[0].courseId
-        item_count = sum(
-            value["courseId"] == course_id for value in data["items"].values()
-        )
-        data["courses"][course_id] = {"itemsDone": 0, "itemsTotal": item_count}
-    _save(data)
+    return _backend.save_items(items)
 
 
 def get_items(course_id: str) -> list[Item]:
-    data = _load()
-    items = [
-        Item.model_validate(value)
-        for value in data["items"].values()
-        if value["courseId"] == course_id
-    ]
-    return sorted(items, key=lambda item: item.orderIndex)
+    return _backend.get_items(course_id)
 
 
 def get_item(item_id: str) -> Item | None:
-    value = _load()["items"].get(item_id)
-    return Item.model_validate(value) if value else None
+    return _backend.get_item(item_id)
 
 
 def save_run(run: Run) -> None:
-    data = _load()
-    data["runs"].append(run.model_dump())
-    _save(data)
+    return _backend.save_run(run)
 
 
 def get_runs(item_id: str) -> list[Run]:
-    return [
-        Run.model_validate(value)
-        for value in _load()["runs"]
-        if value["itemId"] == item_id
-    ]
+    return _backend.get_runs(item_id)
 
 
 def save_finding(finding: Finding) -> None:
-    data = _load()
-    data["findings"].append(finding.model_dump())
-    _save(data)
+    return _backend.save_finding(finding)
 
 
 def get_findings(course_id: str) -> list[Finding]:
-    data = _load()
-    course_item_ids = {
-        item_id
-        for item_id, item in data["items"].items()
-        if item["courseId"] == course_id
-    }
-    return [
-        Finding.model_validate(value)
-        for value in data["findings"]
-        if value["itemId"] in course_item_ids
-    ]
+    return _backend.get_findings(course_id)
 
 
 def update_course_status(course_id: str, items_done: int) -> dict:
-    data = _load()
-    status = data["courses"].get(course_id)
-    if status is None:
-        item_count = sum(
-            item["courseId"] == course_id for item in data["items"].values()
-        )
-        status = {"itemsDone": 0, "itemsTotal": item_count}
-        data["courses"][course_id] = status
-    status["itemsDone"] = items_done
-    _save(data)
-    return status
+    return _backend.update_course_status(course_id, items_done)
 
 
 def get_course_status(course_id: str) -> dict:
-    data = _load()
-    return data["courses"].get(
-        course_id, {"itemsDone": 0, "itemsTotal": len(get_items(course_id))}
-    )
+    return _backend.get_course_status(course_id)
+
+
+def save_course(course_id: str, filename: str, items_total: int) -> None:
+    return _backend.save_course(course_id, filename, items_total)
+
+
+def upload_course_file(
+    course_id: str, filename: str, contents: bytes, content_type: str
+) -> None:
+    if STORAGE_BACKEND == "supabase":
+        return _backend.upload_course_file(course_id, filename, contents, content_type)
+
+
+def create_signed_url(course_id: str, filename: str) -> str:
+    if STORAGE_BACKEND != "supabase":
+        raise RuntimeError("Signed file URLs are available only with Supabase storage.")
+    return _backend.create_signed_url(course_id, filename)

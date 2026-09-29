@@ -1,4 +1,4 @@
-"""Classifier tests use fake signals and never call Bedrock."""
+"""Classifier tests use fake signals and never call Gemini."""
 
 from app.classifier import classify_item
 from app.models import Item

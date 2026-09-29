@@ -1,14 +1,16 @@
-"""Run a real upload, Bedrock analysis, and results check against a local API."""
+"""Run a real upload, Gemini analysis, and results check against a local API."""
 
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 
@@ -18,6 +20,19 @@ EXPECTED_RUNS_PER_ITEM = 15
 PERSONAS = ("average", "weak", "strong")
 START_SERVER_MESSAGE = "Start the server first: uvicorn app.main:app --reload --port 8000"
 RESULTS_PATH = Path(__file__).resolve().parents[1] / "docs" / "smoke-test-results.json"
+SENSITIVE_FIELDS = {
+    "api-key",
+    "apikey",
+    "authorization",
+    "access-token",
+    "token",
+    "secret",
+    "password",
+    "service-key",
+    "service-role",
+    "supabase-service-key",
+    "ai-api-key",
+}
 
 
 class SmokeTestError(Exception):
@@ -37,7 +52,6 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("file", type=Path, help="A sample .pptx or .pdf course file")
     parser.add_argument("--base-url", default="http://localhost:8000")
-    parser.add_argument("--api-key", help="Optional API key; API_KEY is used if omitted")
     parser.add_argument("--max-items", type=int, default=4)
     args = parser.parse_args()
     if args.max_items < 1:
@@ -55,6 +69,60 @@ def error_message(payload: Any) -> str:
     return json.dumps(payload, ensure_ascii=False)
 
 
+def _safe_url(url: str) -> str:
+    """Remove URL credentials and mask sensitive query parameters."""
+    try:
+        parts = urlsplit(url)
+        if not parts.scheme or not parts.netloc:
+            return url
+        hostname = parts.hostname or ""
+        if ":" in hostname and not hostname.startswith("["):
+            hostname = f"[{hostname}]"
+        if parts.port is not None:
+            hostname = f"{hostname}:{parts.port}"
+        if parts.username is not None or parts.password is not None:
+            hostname = f"[REDACTED]@{hostname}"
+        query = [
+            (key, "[REDACTED]" if key.lower().replace("_", "-") in SENSITIVE_FIELDS else value)
+            for key, value in parse_qsl(parts.query, keep_blank_values=True)
+        ]
+        return urlunsplit(
+            (parts.scheme, hostname, parts.path, urlencode(query), parts.fragment)
+        )
+    except ValueError:
+        return "[REDACTED_URL]"
+
+
+def _redact_text(text: str, api_key: str | None) -> str:
+    if api_key:
+        text = text.replace(api_key, "[REDACTED]")
+    text = re.sub(
+        r"(?i)(x-api-key\s*[:=]\s*)[^\s,;]+",
+        r"\1[REDACTED]",
+        text,
+    )
+    return re.sub(
+        r"https?://[^\s'\"<>]+",
+        lambda match: _safe_url(match.group(0)),
+        text,
+    )
+
+
+def _redact_value(value: Any, api_key: str | None) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: "[REDACTED]"
+            if str(key).lower().replace("_", "-") in SENSITIVE_FIELDS
+            else _redact_value(item, api_key)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_value(item, api_key) for item in value]
+    if isinstance(value, str):
+        return _redact_text(value, api_key)
+    return value
+
+
 def request_json(
     session: requests.Session,
     method: str,
@@ -66,17 +134,20 @@ def request_json(
     try:
         response = session.request(method, url, timeout=30, **kwargs)
     except requests.RequestException as exc:
-        raise ApiError(None, f"{method} {url} failed: {exc}") from None
+        api_key = session.headers.get("x-api-key")
+        safe_error = _redact_text(str(exc), api_key)
+        raise ApiError(None, f"{method} {_safe_url(url)} failed: {safe_error}") from None
 
     try:
         payload = response.json()
     except ValueError:
         payload = {"_raw_text": response.text}
+    payload = _redact_value(payload, session.headers.get("x-api-key"))
 
     raw_results["requests"].append(
         {
             "method": method,
-            "url": url,
+            "url": _safe_url(url),
             "status_code": response.status_code,
             "response": payload,
         }
@@ -180,13 +251,13 @@ def run_smoke_test(args: argparse.Namespace) -> int:
     started = time.monotonic()
     raw_results = {
         "started_at": datetime.now(timezone.utc).isoformat(),
-        "base_url": args.base_url.rstrip("/"),
+        "base_url": _safe_url(args.base_url.rstrip("/")),
         "requests": [],
         "polls": [],
     }
     exit_code = 0
     session = requests.Session()
-    api_key = args.api_key or os.getenv("API_KEY")
+    api_key = os.getenv("API_KEY")
     if api_key:
         session.headers["x-api-key"] = api_key
 
@@ -222,10 +293,10 @@ def run_smoke_test(args: argparse.Namespace) -> int:
         if item_count > args.max_items:
             print(
                 f"Warning: {item_count} items exceed --max-items {args.max_items}; "
-                "analysis may make many Bedrock calls and cost more."
+                "analysis may make many Gemini calls and cost more."
             )
             if input("Continue? [y/N]: ").strip().lower() != "y":
-                print("Analysis cancelled before calling Bedrock.")
+                print("Analysis cancelled before calling Gemini.")
                 return 0
 
         raw_results["analyze"] = request_json(
@@ -315,10 +386,10 @@ def run_smoke_test(args: argparse.Namespace) -> int:
         print(f"API error ({code}): {exc.message}", file=sys.stderr)
         exit_code = 1
     except SmokeTestError as exc:
-        print(f"Smoke test error: {exc}", file=sys.stderr)
+        print(f"Smoke test error: {_redact_text(str(exc), api_key)}", file=sys.stderr)
         exit_code = 1
     except (OSError, ValueError) as exc:
-        print(f"Smoke test error: {exc}", file=sys.stderr)
+        print(f"Smoke test error: {_redact_text(str(exc), api_key)}", file=sys.stderr)
         exit_code = 1
     finally:
         try:

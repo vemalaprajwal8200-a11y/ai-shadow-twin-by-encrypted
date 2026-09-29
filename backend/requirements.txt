@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-boto3
 python-pptx
 pydantic
 python-dotenv
@@ -8,3 +7,5 @@ python-multipart
 pypdf
 mangum
 requests
+supabase
+openai

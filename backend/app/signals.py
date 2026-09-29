@@ -55,7 +55,6 @@ def compute_signals(item: Item, runs: list[Run]) -> dict:
         except Exception:
             continue
     correct_rate_full = _correct_rate(full_runs, item.answerKey)
-
     return {
         "agreement_rate": agreement_rate,
         "correct_rate": _correct_rate(runs, item.answerKey),

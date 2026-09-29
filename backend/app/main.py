@@ -1,28 +1,32 @@
 """FastAPI endpoints for local course ingestion and student-twin analysis."""
 
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from uuid import uuid4
 
-from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 from pydantic import BaseModel
 
-from app.engine.bedrock_client import invoke_json
+from app.engine.gemini_client import invoke_json, validate_configuration
 from app.classifier import classify_item
 from app.ingest import parse_pdf, parse_pptx
 from app.judge import add_judge_evidence
 from app.storage import (
+    STORAGE_BACKEND,
     get_course_status,
     get_findings,
     get_items,
     get_runs,
+    save_course,
     save_finding,
     save_items,
+    upload_course_file,
     update_course_status,
 )
+from app.storage_supabase import StorageError
 from app.signals import compute_signals
 from app.twin import run_item_full, twin_run
 
@@ -35,6 +39,19 @@ app.add_middleware(
 )
 UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads"
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+
+
+@app.exception_handler(StorageError)
+async def storage_error_handler(_request, _exc):
+    return JSONResponse(
+        status_code=503, content={"error": "Storage backend request failed."}
+    )
+
+
+@app.on_event("startup")
+def validate_ai_settings() -> None:
+    validate_configuration()
+
 
 @app.get("/health")
 def health():
@@ -57,17 +74,12 @@ def ask_twin(request: TwinAskRequest):
             ),
         )
     except ValueError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Bedrock returned invalid JSON: {exc}",
-        ) from exc
+        raise HTTPException(status_code=502, detail="Gemini returned invalid JSON.") from exc
     except RuntimeError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Bedrock configuration error: {exc}",
+            detail=f"Gemini configuration error: {exc}",
         ) from exc
-    except (BotoCoreError, ClientError) as exc:
-        raise HTTPException(status_code=502, detail="Bedrock request failed.") from exc
 
 
 @app.post("/courses")
@@ -80,8 +92,15 @@ async def create_course(file: UploadFile = File(...)):
         return JSONResponse(status_code=413, content={"error": "File exceeds the 20 MB limit."})
 
     course_id = str(uuid4())
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    path = UPLOAD_DIR / f"{course_id}{suffix}"
+    original_filename = Path(file.filename or f"upload{suffix}").name
+    is_temporary = STORAGE_BACKEND == "supabase"
+    if is_temporary:
+        temporary_file = NamedTemporaryFile(suffix=suffix, delete=False)
+        path = Path(temporary_file.name)
+        temporary_file.close()
+    else:
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        path = UPLOAD_DIR / f"{course_id}{suffix}"
     path.write_bytes(contents)
     try:
         items = parse_pptx(path, course_id) if suffix == ".pptx" else parse_pdf(path, course_id)
@@ -91,7 +110,21 @@ async def create_course(file: UploadFile = File(...)):
     if not items or not any(item.text.strip() for item in items):
         path.unlink(missing_ok=True)
         return JSONResponse(status_code=422, content={"error": "No text could be extracted from the file."})
-    save_items(items)
+    try:
+        if is_temporary:
+            upload_course_file(
+                course_id,
+                original_filename,
+                contents,
+                file.content_type or "application/octet-stream",
+            )
+        save_items(items)
+        save_course(course_id, original_filename, len(items))
+    except StorageError:
+        path.unlink(missing_ok=True)
+        return JSONResponse(status_code=503, content={"error": "Storage backend request failed."})
+    if is_temporary:
+        path.unlink(missing_ok=True)
     return {"courseId": course_id, "itemCount": len(items)}
 
 

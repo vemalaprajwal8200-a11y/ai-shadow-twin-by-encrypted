@@ -1,8 +1,8 @@
-"""Add a Bedrock second opinion without replacing the rules label."""
+"""Add a Gemini second opinion without replacing the rules label."""
 
 import json
 
-from app.engine.bedrock_client import ask
+from app.engine.gemini_client import ask
 from app.models import Finding, Item, Run
 
 

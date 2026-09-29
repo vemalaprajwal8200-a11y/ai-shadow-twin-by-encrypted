@@ -14,7 +14,17 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Edit `.env` and set `BEDROCK_MODEL_ID`. Set `AWS_REGION` if it differs from `us-east-1`. Configure AWS credentials with `aws configure`; keys are not stored in this project.
+Edit `.env` and set `GEMINI_API_KEY` and `GEMINI_MODEL`. The optional `GEMINI_BASE_URL` defaults to Google's OpenAI-compatible Gemini endpoint. The service fails at startup if the API key or model is missing.
+
+### Gemini setup
+
+```dotenv
+GEMINI_API_KEY=<your-google-ai-studio-api-key>
+GEMINI_MODEL=<available-gemini-model>
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+```
+
+Get an API key from Google AI Studio. Gemini calls use JSON-only responses, retry rate limits/server errors with exponential backoff, and make one corrective retry when the response is not valid JSON. Never commit `.env` or log API keys or authorization headers.
 
 Start the API from `backend/`:
 
@@ -23,6 +33,21 @@ uvicorn app.main:app --reload
 ```
 
 Open the interactive API page at `http://127.0.0.1:8000/docs`.
+
+## Supabase setup
+
+1. In the Supabase SQL Editor, run `docs/supabase_schema.sql`.
+2. In **Storage**, create a bucket named `course-files` and keep it **Private**.
+3. Copy `.env.example` to `.env`. Set `STORAGE_BACKEND=supabase`, `SUPABASE_URL`, and `SUPABASE_SERVICE_KEY` using your Supabase project settings. Keep the service-role key private; never use it in frontend code.
+4. Keep `SUPABASE_BUCKET=course-files`, then start the backend as usual. The backend uses the service-role key, which bypasses RLS; the public anon key has no table policies.
+
+To test Supabase manually, run this from `backend/` after setup:
+
+```powershell
+python scripts/check_supabase.py
+```
+
+`PASS` means the script inserted, read, and deleted a temporary course, item, and run. `FAIL` means check the settings/schema; if cleanup failed, remove the reported `check-*` rows in Supabase.
 
 ## Test with curl
 
@@ -34,7 +59,7 @@ curl.exe -X POST http://127.0.0.1:8000/courses/COURSE_ID/analyze
 curl.exe http://127.0.0.1:8000/courses/COURSE_ID/status
 ```
 
-Replace `COURSE_ID` with the ID from the upload response. Analysis calls AWS Bedrock and requires valid AWS credentials and a model ID. Upload and status checks are local.
+Replace `COURSE_ID` with the ID from the upload response. Analysis requires a valid Gemini API key and model. Upload and status checks use the selected storage backend.
 
 ## Smoke test
 
@@ -44,4 +69,4 @@ Create a small PowerPoint with 3-4 slides. Add a few sentences of course materia
 python scripts/smoke_test.py sample.pptx --max-items 4
 ```
 
-The script uploads the file, starts analysis, polls progress, and reports runs and findings. It uses real Bedrock calls, so set `AWS_REGION`, `BEDROCK_MODEL_ID`, and AWS credentials first. Add `--api-key KEY` or set `API_KEY` if your API requires it. Full responses are saved to `backend/docs/smoke-test-results.json`.
+The script uploads the file, starts analysis, polls progress, and reports runs and findings. It uses real Gemini calls, so configure the Gemini settings first. Set `API_KEY` in `backend/.env` if your API requires it; do not pass secrets on the command line. Full responses are saved to `backend/docs/smoke-test-results.json`, with API keys and sensitive URL values redacted.

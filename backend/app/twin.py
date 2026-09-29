@@ -1,9 +1,10 @@
 """Generate student-twin runs from taught-only or full-course context."""
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
 from uuid import uuid4
 
-from app.engine.bedrock_client import ask
+from app.engine.gemini_client import ask
 from app.models import Run
 from app.storage import get_item, get_items, save_run
 
@@ -12,7 +13,18 @@ PERSONAS = {
     "weak": ("Respond like a student who struggles with unfamiliar ideas.", 0.7),
     "strong": ("Respond like a student who understands the material deeply.", 0.5),
 }
-RUNS_PER_PERSONA = 5
+def _integer_setting(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if not value or (value.startswith("<") and value.endswith(">")):
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        raise RuntimeError(f"{name} must be an integer.") from None
+
+
+RUNS_PER_PERSONA = _integer_setting("RUNS_PER_PERSONA", 5)
+MAX_CONCURRENCY = _integer_setting("MAX_CONCURRENCY", 5)
 
 
 def twin_run(
@@ -70,7 +82,7 @@ def run_item_full(item_id: str) -> list[Run]:
         raise ValueError(f"Item not found: {item_id}")
 
     successful_runs = []
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=MAX_CONCURRENCY) as executor:
         futures = [
             executor.submit(twin_run, item_id, persona, persist=False)
             for persona in PERSONAS
