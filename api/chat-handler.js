@@ -176,10 +176,11 @@ export default async function chatHandler(req, res) {
     return { visibleText: cleanVisibleText, itemCards: parsedItems, sources: parsedSources }
   }
 
-  // Handle Gemini Streaming
+  // Handle Gemini (non-streaming generateContent to avoid WSARECV/TCP-abort on Windows)
   if (process.env.GEMINI_API_KEY || (apiKey && apiKey.startsWith('AIza'))) {
     const key = process.env.GEMINI_API_KEY || apiKey
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${key}`
+    // Use the non-streaming endpoint — one complete JSON response, no keep-alive stream.
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`
 
     const promptText = `${systemPrompt}\n\nUser Message:\n${lastUserMessage}`
 
@@ -189,6 +190,10 @@ export default async function chatHandler(req, res) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptText }] }],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 1024,
+          },
         }),
       })
 
@@ -200,56 +205,54 @@ export default async function chatHandler(req, res) {
         return
       }
 
+      const geminiJson = await geminiRes.json()
+      const rawFullText =
+        geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        geminiJson?.candidates?.[0]?.output ||
+        ''
+
+      if (!rawFullText) {
+        res.statusCode = 502
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ error: 'Gemini returned an empty response.' }))
+        return
+      }
+
+      const { visibleText, itemCards, sources: parsedSources } = extractAndValidateMetadata(rawFullText)
+
+      // Re-emit as SSE so the frontend typing animation still works.
+      // Trickle the visible text in small word-boundary chunks.
       res.statusCode = 200
       res.setHeader('Content-Type', 'text/event-stream')
       res.setHeader('Cache-Control', 'no-cache')
-      res.setHeader('Connection', 'keep-alive')
+      res.setHeader('X-Accel-Buffering', 'no') // disable Nginx/Vercel proxy buffering
 
-      const reader = geminiRes.body.getReader()
-      const decoder = new TextDecoder()
-      let rawFullText = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        try {
-          const jsonMatch = chunk.match(/"text":\s*"([^"\\]*(?:\\.[^"\\]*)*)"/g)
-          if (jsonMatch) {
-            for (const match of jsonMatch) {
-              const textVal = JSON.parse(`{${match}}`).text
-              if (textVal) {
-                rawFullText += textVal
-                // Stream text only if tags haven't started
-                if (!rawFullText.includes('<items>') && !rawFullText.includes('<sources>')) {
-                  res.write(`data: ${JSON.stringify({ text: textVal })}\n\n`)
-                }
-              }
-            }
-          }
-        } catch {
-          rawFullText += chunk
-        }
+      const CHUNK = 6 // characters per SSE write
+      for (let i = 0; i < visibleText.length; i += CHUNK) {
+        const slice = visibleText.slice(i, i + CHUNK)
+        res.write(`data: ${JSON.stringify({ text: slice })}\n\n`)
       }
 
-      // Process metadata tags & send final clean text and metadata
-      const { visibleText, itemCards, sources: parsedSources } = extractAndValidateMetadata(rawFullText)
-      
-      // If visibleText has parts not streamed yet, send them
+      // Final frame carries metadata
       res.write(`data: ${JSON.stringify({ text: '', itemCards, sources: parsedSources })}\n\n`)
       res.write('data: [DONE]\n\n')
       res.end()
       return
     } catch (err) {
-      res.statusCode = 500
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify({ error: err.message || 'Stream processing failed.' }))
+      console.error('Gemini handler error:', err)
+      // If headers not sent yet, reply with JSON error
+      if (!res.headersSent) {
+        res.statusCode = 500
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ error: err.message || 'Gemini request failed.' }))
+      } else {
+        res.end()
+      }
       return
     }
   }
 
-  // Handle OpenAI Streaming
+  // Handle OpenAI (non-streaming to avoid TCP-abort on Windows)
   if (process.env.OPENAI_API_KEY || apiKey) {
     const key = process.env.OPENAI_API_KEY || apiKey
     try {
@@ -265,7 +268,9 @@ export default async function chatHandler(req, res) {
             { role: 'system', content: systemPrompt },
             ...messages.map((m) => ({ role: m.role, content: m.content })),
           ],
-          stream: true,
+          stream: false, // single JSON response
+          max_tokens: 1024,
+          temperature: 0.4,
         }),
       })
 
@@ -277,50 +282,43 @@ export default async function chatHandler(req, res) {
         return
       }
 
+      const openAiJson = await openAiRes.json()
+      const rawFullText = openAiJson?.choices?.[0]?.message?.content || ''
+
+      if (!rawFullText) {
+        res.statusCode = 502
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ error: 'OpenAI returned an empty response.' }))
+        return
+      }
+
+      const { visibleText, itemCards, sources: parsedSources } = extractAndValidateMetadata(rawFullText)
+
+      // Re-emit as SSE trickle so the frontend typing animation still works
       res.statusCode = 200
       res.setHeader('Content-Type', 'text/event-stream')
       res.setHeader('Cache-Control', 'no-cache')
-      res.setHeader('Connection', 'keep-alive')
+      res.setHeader('X-Accel-Buffering', 'no')
 
-      const reader = openAiRes.body.getReader()
-      const decoder = new TextDecoder()
-      let rawFullText = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6).trim()
-            if (dataStr === '[DONE]') continue
-            try {
-              const json = JSON.parse(dataStr)
-              const content = json.choices?.[0]?.delta?.content
-              if (content) {
-                rawFullText += content
-                if (!rawFullText.includes('<items>') && !rawFullText.includes('<sources>')) {
-                  res.write(`data: ${JSON.stringify({ text: content })}\n\n`)
-                }
-              }
-            } catch {
-              // ignore partial json
-            }
-          }
-        }
+      const CHUNK = 6
+      for (let i = 0; i < visibleText.length; i += CHUNK) {
+        const slice = visibleText.slice(i, i + CHUNK)
+        res.write(`data: ${JSON.stringify({ text: slice })}\n\n`)
       }
 
-      const { itemCards, sources: parsedSources } = extractAndValidateMetadata(rawFullText)
       res.write(`data: ${JSON.stringify({ text: '', itemCards, sources: parsedSources })}\n\n`)
       res.write('data: [DONE]\n\n')
       res.end()
       return
     } catch (err) {
-      res.statusCode = 500
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify({ error: err.message || 'OpenAI stream failed.' }))
+      console.error('OpenAI handler error:', err)
+      if (!res.headersSent) {
+        res.statusCode = 500
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ error: err.message || 'OpenAI request failed.' }))
+      } else {
+        res.end()
+      }
       return
     }
   }
