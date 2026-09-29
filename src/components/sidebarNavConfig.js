@@ -1,6 +1,6 @@
 import { BarChart3, FileText, FolderOpen, Settings, ShieldCheck, BookOpen, ListChecks, CalendarCheck, Sparkles } from 'lucide-react'
 
-/** @typedef {'student-details' | 'overview' | 'flagged-units' | 'verdicts' | 'attention' | 'courses' | 'upload' | 'progress' | 'content' | 'accuracy' | 'defect-rate' | 'review' | 'export' | 'runs' | 'personas' | 'confidence'} SidebarSubtopicKind */
+/** @typedef {'student-details' | 'overview' | 'flagged-units' | 'verdicts' | 'attention' | 'courses' | 'upload' | 'progress' | 'content' | 'accuracy' | 'defect-rate' | 'review' | 'export' | 'runs' | 'personas' | 'confidence' | 'faculty-profile'} SidebarSubtopicKind */
 /** @typedef {{ id: string, label: string, to: string, kind: SidebarSubtopicKind, description: string, filter?: 'all' | 'slide' | 'question' | 'flagged' }} SidebarNavChild */
 /** @typedef {{ label: string, to: string, icon: import('lucide-react').LucideIcon, badge?: string, children: SidebarNavChild[] }} SidebarNavGroup */
 
@@ -65,6 +65,7 @@ export const sidebarNavGroups = [
       { id: 'settings-runs', label: 'Runs per item', to: '/topics/settings/runs', kind: 'runs', description: 'Adjust how many twin runs are used to analyse each item.' },
       { id: 'settings-personas', label: 'Personas', to: '/topics/settings/personas', kind: 'personas', description: 'Choose the learner personas used during analysis.' },
       { id: 'settings-confidence', label: 'Confidence threshold', to: '/topics/settings/confidence', kind: 'confidence', description: 'Set the confidence level used to surface a review flag.' },
+      { id: 'settings-faculty-profile', label: 'My profile', to: '/faculty/profile', kind: 'faculty-profile', description: 'Edit your faculty display name and account details.' },
     ],
   },
 ]
@@ -122,4 +123,4 @@ export const studentBottomTabs = [
   { label: 'Slides', to: '/topics/content/slides', icon: FileText },
   { label: 'Questions', to: '/topics/content/questions', icon: BookOpen },
   { label: 'Settings', to: '/topics/settings/student', icon: Settings },
-]
+]
