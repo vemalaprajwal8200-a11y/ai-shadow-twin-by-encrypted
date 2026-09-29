@@ -6,6 +6,7 @@ import { Avatar, Badge } from './ui/Primitives'
 
 function getPageContext(pathname, role) {
   const groups = getSidebarNavGroups(role)
+  if (pathname === '/chat') return { group: 'Ask the Twin', title: 'Chat' }
   if (pathname === '/dashboard') return { group: 'Dashboard', title: role === 'student' ? 'My details' : 'Student details' }
   if (pathname === '/courses') return { group: 'Courses & Upload', title: 'Courses and upload' }
   if (pathname === '/content') return { group: 'Course Content', title: 'Course content' }
@@ -78,3 +79,4 @@ export default function TopBar({ course, courses, onCourseChange, onMenuClick })
     </header>
   )
 }
+

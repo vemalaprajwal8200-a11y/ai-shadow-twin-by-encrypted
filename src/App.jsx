@@ -7,6 +7,7 @@ import { AuthProvider } from './auth/AuthContext'
 import { useDarkMode } from './hooks/useDarkMode'
 
 import About from './pages/About'
+const ChatPage = lazy(() => import('./pages/ChatPage'))
 const CoursesPage = lazy(() => import('./pages/CoursesPage'))
 const CourseContentPage = lazy(() => import('./pages/CourseContentPage'))
 const ItemDetailPage = lazy(() => import('./pages/ItemDetailPage'))
@@ -63,7 +64,9 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
+        <Route path="chat" element={<ChatPage courseId={courseId} onCourseChange={setCourseId} />} />
         <Route path="dashboard" element={<DashboardHome courseId={courseId} />} />
+        <Route path="content/:itemId" element={<ItemDetailPage />} />
 
         <Route element={<RoleRoute allowedRoles={['student']} />}>
           <Route path="topics/dashboard/my-units" element={<MyUnits />} />
@@ -75,7 +78,6 @@ function AppRoutes() {
         <Route element={<RoleRoute allowedRoles={['faculty']} />}>
           <Route path="courses" element={<CoursesPage courseId={courseId} />} />
           <Route path="content" element={<CourseContentPage courseId={courseId} />} />
-          <Route path="content/:itemId" element={<ItemDetailPage />} />
           <Route path="report" element={<QualityReportPage />} />
           <Route path="settings" element={<SettingsPage />} />
           {sidebarNavSubtopics.filter((topic) => topic.kind !== 'student-details' && topic.kind !== 'content').map((topic) => (

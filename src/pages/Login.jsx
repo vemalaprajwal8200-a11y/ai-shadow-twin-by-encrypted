@@ -88,10 +88,10 @@ export default function Login() {
           return
         }
 
-        navigate('/dashboard', { replace: true })
+        navigate('/chat', { replace: true })
       } else {
         await loginWithEmail(email, password)
-        navigate('/dashboard', { replace: true })
+        navigate('/chat', { replace: true })
       }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : mode === 'register' ? 'Could not create your account.' : 'Could not sign in.')

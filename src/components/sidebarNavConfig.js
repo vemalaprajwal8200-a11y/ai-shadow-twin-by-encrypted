@@ -1,11 +1,18 @@
-import { BarChart3, FileText, FolderOpen, Settings, ShieldCheck, BookOpen, ListChecks, CalendarCheck } from 'lucide-react'
+import { BarChart3, FileText, FolderOpen, Settings, ShieldCheck, BookOpen, ListChecks, CalendarCheck, Sparkles } from 'lucide-react'
 
 /** @typedef {'student-details' | 'overview' | 'flagged-units' | 'verdicts' | 'attention' | 'courses' | 'upload' | 'progress' | 'content' | 'accuracy' | 'defect-rate' | 'review' | 'export' | 'runs' | 'personas' | 'confidence'} SidebarSubtopicKind */
 /** @typedef {{ id: string, label: string, to: string, kind: SidebarSubtopicKind, description: string, filter?: 'all' | 'slide' | 'question' | 'flagged' }} SidebarNavChild */
-/** @typedef {{ label: string, to: string, icon: import('lucide-react').LucideIcon, children: SidebarNavChild[] }} SidebarNavGroup */
+/** @typedef {{ label: string, to: string, icon: import('lucide-react').LucideIcon, badge?: string, children: SidebarNavChild[] }} SidebarNavGroup */
 
 /** @type {SidebarNavGroup[]} */
 export const sidebarNavGroups = [
+  {
+    label: 'Ask the Twin',
+    to: '/chat',
+    icon: Sparkles,
+    badge: 'AI',
+    children: [],
+  },
   {
     label: 'Dashboard',
     to: '/dashboard',
@@ -72,6 +79,13 @@ export const sidebarNavSubtopics = sidebarNavGroups.flatMap((group) => (
 /** @type {SidebarNavGroup[]} */
 export const studentSidebarNavGroups = [
   {
+    label: 'Ask the Twin',
+    to: '/chat',
+    icon: Sparkles,
+    badge: 'AI',
+    children: [],
+  },
+  {
     label: 'Dashboard',
     to: '/dashboard',
     icon: BarChart3,
@@ -100,6 +114,7 @@ export function getSidebarNavGroups(role) {
 }
 
 export const studentBottomTabs = [
+  { label: 'Ask Twin', to: '/chat', icon: Sparkles },
   { label: 'Dashboard', to: '/dashboard', icon: BarChart3 },
   { label: 'My units', to: '/topics/dashboard/my-units', icon: BarChart3 },
   { label: 'Missed', to: '/topics/dashboard/missed', icon: ListChecks },
@@ -107,4 +122,4 @@ export const studentBottomTabs = [
   { label: 'Slides', to: '/topics/content/slides', icon: FileText },
   { label: 'Questions', to: '/topics/content/questions', icon: BookOpen },
   { label: 'Settings', to: '/topics/settings/student', icon: Settings },
-]
+]

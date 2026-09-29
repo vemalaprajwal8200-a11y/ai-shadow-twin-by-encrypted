@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import SidebarNav from './SidebarNav'
 import TopBar from './TopBar'
+import SlideOverChatPanel from './chat/SlideOverChatPanel'
 import { useAuth } from '../auth/AuthContext'
 
 export default function Layout({ course, courses, onCourseChange, darkMode, setDarkMode }) {
@@ -23,6 +24,8 @@ export default function Layout({ course, courses, onCourseChange, darkMode, setD
           </div>
         </main>
       </div>
+      <SlideOverChatPanel courseId={course} onCourseChange={onCourseChange} />
     </div>
   )
 }
+

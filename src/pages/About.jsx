@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 
 export default function About() {
   const { isAuthenticated } = useAuth()
-  const accountHref = isAuthenticated ? '/dashboard' : '/login'
+  const accountHref = isAuthenticated ? '/chat' : '/login'
 
   return (
     <div className="flex min-h-screen flex-col bg-bg text-text">
@@ -16,7 +16,7 @@ export default function About() {
             <span className="block text-lg font-bold text-heading">Shadow-Twin</span>
           </Link>
           <Link to={accountHref} className="inline-flex min-h-10 items-center rounded-lg border border-border bg-surface px-4 text-sm font-semibold text-text transition-colors hover:bg-page">
-            {isAuthenticated ? 'Open dashboard' : 'Sign in'}
+            {isAuthenticated ? 'Ask the Twin' : 'Login'}
           </Link>
         </nav>
       </header>
@@ -31,7 +31,7 @@ export default function About() {
             </p>
             <div className="flex flex-col gap-3 pt-1 sm:flex-row">
               <Link to={accountHref} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-primary bg-primary px-5 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover hover:text-primary-hover-fg">
-                {isAuthenticated ? 'Open dashboard' : 'Get started'} <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                {isAuthenticated ? 'Ask the Twin' : 'Get started'} <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </Link>
             </div>
           </div>

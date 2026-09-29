@@ -65,6 +65,11 @@ function NavGroup({ group, isOpen, onToggle, onNavigate }) {
         >
           <Icon className="h-4 w-4 shrink-0" />
           <span className="truncate">{group.label}</span>
+          {group.badge && (
+            <span className="ml-auto rounded-md bg-[#CFFFDC] text-[#2E6F40] dark:bg-emerald-950 dark:text-emerald-300 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
+              {group.badge}
+            </span>
+          )}
         </NavLink>
         {group.children.length > 0 && <button
           type="button"
