@@ -9,6 +9,8 @@ import CourseContentPage from './pages/CourseContentPage'
 import ItemDetailPage from './pages/ItemDetailPage'
 import QualityReportPage from './pages/QualityReportPage'
 import SettingsPage from './pages/SettingsPage'
+import SidebarSubtopicPage from './pages/SidebarSubtopicPage'
+import { sidebarNavSubtopics } from './components/sidebarNavConfig'
 import { mockCourses } from './data/mockData'
 import { useEffect, useState } from 'react'
 
@@ -55,6 +57,13 @@ export default function App() {
           <Route path="content/:itemId" element={<ItemDetailPage />} />
           <Route path="report" element={<QualityReportPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          {sidebarNavSubtopics.map((topic) => (
+            <Route
+              key={topic.id}
+              path={topic.to.replace(/^\//, '')}
+              element={<SidebarSubtopicPage topic={topic} courseId={courseId} />}
+            />
+          ))}
         </Route>
         <Route path="*" element={<NotFoundRedirect />} />
       </Routes>
