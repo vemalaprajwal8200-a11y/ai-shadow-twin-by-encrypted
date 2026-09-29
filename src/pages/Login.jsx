@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowLeft, LogIn, UserPlus } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
+import { getDashboardPath, useAuth } from '../auth/AuthContext'
 import { Alert, Button, Card, Input, Select } from '../components/ui/Primitives'
 
 export default function Login() {
@@ -12,6 +12,7 @@ export default function Login() {
   const [accountType, setAccountType] = useState('student')
   const [name, setName] = useState('')
   const [studentId, setStudentId] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [email, setEmail] = useState('')
   const [confirmationSent, setConfirmationSent] = useState(false)
   const [password, setPassword] = useState('')
@@ -80,7 +81,9 @@ export default function Login() {
         const result = await registerWithEmail(email, password, {
           displayName: name,
           studentId,
+          role: accountType,
           requestedRole: accountType,
+          inviteCode: inviteCode.trim(),
         })
         if (result.requiresEmailConfirmation) {
           setConfirmationSent(true)
@@ -88,10 +91,12 @@ export default function Login() {
           return
         }
 
-        navigate('/chat', { replace: true })
+        const target = getDashboardPath(result.user?.role || accountType)
+        navigate(target, { replace: true })
       } else {
-        await loginWithEmail(email, password)
-        navigate('/chat', { replace: true })
+        const profileUser = await loginWithEmail(email, password)
+        const target = getDashboardPath(profileUser?.role)
+        navigate(target, { replace: true })
       }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : mode === 'register' ? 'Could not create your account.' : 'Could not sign in.')
@@ -106,6 +111,7 @@ export default function Login() {
     setMessage('')
     setConfirmationSent(false)
     setAccountType('student')
+    setInviteCode('')
     setPassword('')
     setConfirmPassword('')
   }
@@ -166,12 +172,17 @@ export default function Login() {
                 onChange={(event) => {
                   setAccountType(event.target.value)
                   setStudentId('')
+                  setInviteCode('')
                 }}
               >
                 <option value="student">Student</option>
                 <option value="faculty">Faculty member</option>
               </Select>
-              {accountType === 'faculty' && <p className="mt-2 text-sm text-muted">Faculty access requires administrator approval. Ask your administrator to approve your email before registering.</p>}
+              {accountType === 'faculty' && (
+                <p className="mt-2 text-sm text-muted">
+                  Registering as faculty provides access to course analysis, quality reports, and class analytics.
+                </p>
+              )}
             </div>
             <div>
               <Input
@@ -197,6 +208,19 @@ export default function Login() {
                 value={studentId}
                 onChange={(event) => setStudentId(event.target.value)}
                 placeholder="Your university ID"
+              />
+            </div>}
+            {accountType === 'faculty' && <div>
+              <Input
+                id="faculty-invite-code"
+                label="Faculty invite code (if required)"
+                type="password"
+                autoComplete="off"
+                maxLength={64}
+                value={inviteCode}
+                onChange={(event) => setInviteCode(event.target.value)}
+                placeholder="Enter invite code"
+                helper="If your institution configured a faculty invite code, enter it here."
               />
             </div>}
           </>}

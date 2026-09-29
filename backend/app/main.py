@@ -1,15 +1,23 @@
 """FastAPI endpoints for local course ingestion and student-twin analysis."""
 
+import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Any
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 from pydantic import BaseModel
 
+from app.auth import (
+    get_current_user,
+    get_faculty_invite_code,
+    is_faculty_code_valid,
+    require_faculty,
+)
 from app.engine.gemini_client import invoke_json, validate_configuration
 from app.classifier import classify_item
 from app.ingest import parse_pdf, parse_pptx
@@ -50,12 +58,29 @@ async def storage_error_handler(_request, _exc):
 
 @app.on_event("startup")
 def validate_ai_settings() -> None:
-    validate_configuration()
+    if not any(os.getenv(name) for name in ("GEMINI_API_KEY", "GEMINI_MODEL")):
+        return
+    try:
+        validate_configuration()
+    except RuntimeError:
+        return
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+class InviteCodeRequest(BaseModel):
+    code: str | None = None
+
+
+@app.post("/auth/verify-faculty-code")
+def verify_faculty_code(request: InviteCodeRequest = InviteCodeRequest()):
+    """Verify if faculty invite code is valid. Never exposes secret code to client."""
+    has_code = bool(get_faculty_invite_code())
+    valid = is_faculty_code_valid(request.code)
+    return {"required": has_code, "valid": valid}
 
 
 class TwinAskRequest(BaseModel):
@@ -83,7 +108,7 @@ def ask_twin(request: TwinAskRequest):
 
 
 @app.post("/courses")
-async def create_course(file: UploadFile = File(...)):
+async def create_course(file: UploadFile = File(...), _faculty: Any = Depends(require_faculty)):
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in {".pptx", ".pdf"}:
         return JSONResponse(status_code=415, content={"error": "Upload a .pptx or .pdf file."})
@@ -129,7 +154,7 @@ async def create_course(file: UploadFile = File(...)):
 
 
 @app.get("/courses/{course_id}/items")
-def course_items(course_id: str):
+def course_items(course_id: str, _user: Any = Depends(get_current_user)):
     return get_items(course_id)
 
 
@@ -160,7 +185,11 @@ def _analyze_course_background(course_id: str) -> None:
 
 
 @app.post("/courses/{course_id}/analyze")
-def analyze_course(course_id: str, background_tasks: BackgroundTasks):
+def analyze_course(
+    course_id: str,
+    background_tasks: BackgroundTasks,
+    _faculty: Any = Depends(require_faculty),
+):
     items = get_items(course_id)
     if not items:
         raise HTTPException(status_code=404, detail="Course has no stored items.")
@@ -170,7 +199,7 @@ def analyze_course(course_id: str, background_tasks: BackgroundTasks):
 
 
 @app.get("/courses/{course_id}/status")
-def course_status(course_id: str):
+def course_status(course_id: str, _user: Any = Depends(get_current_user)):
     return {"courseId": course_id, **get_course_status(course_id)}
 
 
@@ -179,6 +208,7 @@ def course_findings(
     course_id: str,
     label: str | None = Query(default=None),
     severity: str | None = Query(default=None),
+    _faculty: Any = Depends(require_faculty),
 ):
     findings = get_findings(course_id)
     if label is not None:
@@ -188,8 +218,53 @@ def course_findings(
     return findings
 
 
+class ReviewRequest(BaseModel):
+    itemId: str
+    status: str
+    comment: str | None = None
+
+
+@app.post("/courses/{course_id}/review")
+def review_item(
+    course_id: str,
+    request: ReviewRequest,
+    _faculty: Any = Depends(require_faculty),
+):
+    return {"courseId": course_id, "itemId": request.itemId, "status": request.status}
+
+
+class RewriteRequest(BaseModel):
+    itemId: str
+    suggestedRewrite: str
+
+
+@app.post("/courses/{course_id}/rewrite")
+def rewrite_item(
+    course_id: str,
+    request: RewriteRequest,
+    _faculty: Any = Depends(require_faculty),
+):
+    return {"courseId": course_id, "itemId": request.itemId, "rewrite": request.suggestedRewrite}
+
+
+@app.get("/courses/{course_id}/summary")
+def course_summary(
+    course_id: str,
+    _faculty: Any = Depends(require_faculty),
+):
+    status_info = get_course_status(course_id)
+    findings = get_findings(course_id)
+    return {
+        "courseId": course_id,
+        "status": status_info,
+        "totalFindings": len(findings),
+        "defects": len([f for f in findings if f.label == "content_defect"]),
+        "gaps": len([f for f in findings if f.label == "ability_gap"]),
+    }
+
+
 @app.get("/items/{item_id}/runs")
-def item_runs(item_id: str):
+def item_runs(item_id: str, _faculty: Any = Depends(require_faculty)):
     return get_runs(item_id)
 
 
