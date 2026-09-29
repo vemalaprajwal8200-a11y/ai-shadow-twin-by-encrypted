@@ -77,7 +77,7 @@ export async function getMyStudent(user) {
 
   const student = await getStudentById(user.studentId)
   if (!student || (user.courseId && student.courseId !== user.courseId)) {
-    const error = new Error('Student record not found.')
+    const error = new Error('Your account is active, but this student ID is not linked to an academic record.')
     error.status = 404
     throw error
   }
