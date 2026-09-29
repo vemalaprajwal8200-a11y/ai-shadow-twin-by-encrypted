@@ -18,7 +18,6 @@ export default function Login() {
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
-    setMessage('')
     if (mode === 'register' && (!name.trim() || !studentId.trim())) {
       setError('Enter your name and USN / Student ID.')
       return
