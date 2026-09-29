@@ -8,6 +8,7 @@ dist
 *.env
 !.env.example
 backend/.env.example
+backend/env.local
 .vercel/
 .aws/
 data/

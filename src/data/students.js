@@ -95,7 +95,10 @@ function copyStudent(student) {
 /** @param {string} id @returns {Promise<StudentRecord | undefined>} */
 export async function getStudentRecordById(id) {
   await new Promise((resolve) => window.setTimeout(resolve, 180))
-  const student = students.find((record) => record.id === id)
+  const normalizedId = id.trim().toLowerCase()
+  const student = students.find((record) => (
+    record.id.toLowerCase() === normalizedId || record.rollNo.toLowerCase() === normalizedId
+  ))
   return student ? copyStudent(student) : undefined
 }
 

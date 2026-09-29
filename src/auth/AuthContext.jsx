@@ -10,20 +10,21 @@ async function getProfileUser(client, authUser) {
     .eq('id', authUser.id)
     .maybeSingle()
 
-  if (error || !data) {
+  if (error && error.code !== 'PGRST205') {
     throw new Error('Account profile unavailable. Run the Supabase auth setup SQL and try again.')
   }
 
+  const metadata = authUser.user_metadata || {}
   return {
     id: authUser.id,
-    name: data.display_name || authUser.email?.split('@')[0] || 'User',
+    name: data?.display_name || metadata.display_name || authUser.email?.split('@')[0] || 'User',
     email: authUser.email || '',
-    role: data.role === 'faculty' ? 'faculty' : 'student',
-    requestedRole: data.role === 'faculty'
+    role: data?.role === 'faculty' ? 'faculty' : 'student',
+    requestedRole: data?.role === 'faculty'
       ? 'faculty'
-      : authUser.user_metadata?.requested_role === 'faculty' ? 'faculty' : 'student',
-    studentId: data.student_id || undefined,
-    courseId: data.course_id || undefined,
+      : metadata.requested_role === 'faculty' ? 'faculty' : 'student',
+    studentId: data?.student_id || metadata.student_id || undefined,
+    courseId: data?.course_id || undefined,
   }
 }
 
