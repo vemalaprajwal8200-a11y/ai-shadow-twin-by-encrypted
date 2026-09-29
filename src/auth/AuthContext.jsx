@@ -87,18 +87,39 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(user),
     configured: isSupabaseConfigured(),
-    async registerWithEmail(email, password, displayName = '') {
+    async registerWithEmail(email, password, displayName = '', studentId = '') {
       const client = getSupabaseClient()
       const { data, error } = await client.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/login?confirmed=1`,
-          data: { display_name: displayName.trim() },
+          data: {
+            display_name: displayName.trim(),
+            student_id: studentId.trim(),
+          },
         },
       })
       if (error) throw error
       if (!data.user) throw new Error('Account registration did not return a user.')
+    },
+    async verifySignupOtp(email, token) {
+      const client = getSupabaseClient()
+      const { data, error } = await client.auth.verifyOtp({
+        email: email.trim(),
+        token: token.trim(),
+        type: 'signup',
+      })
+      if (error) throw error
+      if (!data.user) throw new Error('Email verification did not return an account.')
+
+      const { error: signOutError } = await client.auth.signOut({ scope: 'local' })
+      if (signOutError) throw signOutError
+      setUser(null)
+    },
+    async resendSignupOtp(email) {
+      const client = getSupabaseClient()
+      const { error } = await client.auth.resend({ type: 'signup', email: email.trim() })
+      if (error) throw error
     },
     async loginWithEmail(email, password) {
       const client = getSupabaseClient()

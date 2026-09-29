@@ -16,10 +16,8 @@ export function ProtectedRoute({ children }) {
 
 export function LoginRoute() {
   const { isAuthenticated, loading } = useAuth()
-  const location = useLocation()
-  const emailConfirmed = new URLSearchParams(location.search).get('confirmed') === '1'
   if (loading) return <div className="grid min-h-screen place-items-center bg-bg text-sm text-muted" role="status">Checking your session...</div>
-  return isAuthenticated && !emailConfirmed ? <About /> : <Login />
+  return isAuthenticated ? <About /> : <Login />
 }
 
 /** @param {{ allowedRoles: Array<'student' | 'faculty'>, children?: import('react').ReactNode }} props */
