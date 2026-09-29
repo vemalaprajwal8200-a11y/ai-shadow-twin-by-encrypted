@@ -41,9 +41,17 @@ from app.twin import run_item_full, twin_run
 app = FastAPI(title="AI Shadow-Twin API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads"
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024

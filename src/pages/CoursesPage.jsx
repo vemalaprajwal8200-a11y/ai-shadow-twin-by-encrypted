@@ -1,17 +1,57 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, CheckCircle2, CloudUpload, FileText, LayoutGrid, Sparkles } from 'lucide-react'
+import { getSupabaseClient, isSupabaseConfigured } from '../api/supabase'
 import mockApi from '../api/mock'
 import { PageHeader } from '../components/dashboard/DashboardPrimitives'
 import { Badge, Button } from '../components/ui/Primitives'
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
+
+async function getAuthHeaders() {
+  const headers = { Accept: 'application/json' }
+  try {
+    if (!isSupabaseConfigured()) return headers
+    const client = getSupabaseClient()
+    const { data } = await client.auth.getSession()
+    if (data.session?.access_token) {
+      headers.Authorization = `Bearer ${data.session.access_token}`
+    }
+  } catch {
+    // Graceful fallback for local/demo use without a configured auth session
+  }
+  return headers
+}
+
+async function uploadMaterialFile(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetch(`${API_BASE_URL}/courses`, {
+    method: 'POST',
+    body: formData,
+    headers: await getAuthHeaders(),
+  })
+
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(payload?.error || 'The upload failed. Please try a different file.')
+  }
+
+  return {
+    name: file.name,
+    courseId: payload.courseId,
+    itemCount: payload.itemCount,
+    progress: 100,
+  }
+}
+
 export default function CoursesPage({ courseId }) {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
-  const [uploadedFiles, setUploadedFiles] = useState([
-    { name: 'Week 1 slides.pdf', progress: 100 },
-    { name: 'Practice questions.csv', progress: 72 },
-  ])
+  const [uploadedFiles, setUploadedFiles] = useState([])
   const [analysisStatus, setAnalysisStatus] = useState(null)
+  const [uploadError, setUploadError] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -35,14 +75,61 @@ export default function CoursesPage({ courseId }) {
     [courseId, courses],
   )
 
-  const handleFiles = (list) => {
-    setUploadedFiles((existing) => [...existing, ...list.map((file) => ({ name: file.name, progress: 40 }))])
+  const handleFiles = async (list) => {
+    if (!list.length) return
+    setUploadError('')
+    setUploading(true)
+
+    try {
+      const results = await Promise.all(list.map((file) => uploadMaterialFile(file)))
+      setUploadedFiles((existing) => [...existing, ...results])
+      if (results[0]?.courseId) {
+        const nextCourseId = results[0].courseId
+        if (nextCourseId && nextCourseId !== courseId) {
+          window.location.hash = `#course-${nextCourseId}`
+        }
+      }
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Could not upload the selected material.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const runAnalysis = async () => {
+    const targetCourseId = uploadedFiles[0]?.courseId || courseId
+    if (!targetCourseId) {
+      setUploadError('Upload a file before starting analysis.')
+      return
+    }
+
     setAnalysisStatus({ state: 'Running', step: 'Twin attempts running' })
-    const result = await mockApi.runShadowTwin(courseId, uploadedFiles)
-    setAnalysisStatus(result)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/courses/${targetCourseId}/analyze`, {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.detail || 'Analysis could not be started.')
+      }
+      setAnalysisStatus({
+        status: payload.status || 'running',
+        courseId: targetCourseId,
+        progress: [
+          { step: 'Uploaded', done: true },
+          { step: 'Text extracted', done: false },
+          { step: 'Twin attempts running', done: false },
+          { step: 'Classifying', done: false },
+          { step: 'Ready', done: false },
+        ],
+      })
+      return
+    } catch {
+      const result = await mockApi.runShadowTwin(targetCourseId, uploadedFiles)
+      setAnalysisStatus(result)
+    }
   }
 
   if (loading) {
@@ -118,12 +205,19 @@ export default function CoursesPage({ courseId }) {
             ))}
           </div>
 
+          {uploadError && (
+            <div className="mt-4 rounded-xl border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
+              {uploadError}
+            </div>
+          )}
+
           <Button
             onClick={runAnalysis}
             className="mt-5"
+            disabled={uploading || uploadedFiles.length === 0}
           >
             <Sparkles className="h-4 w-4" />
-            Run Shadow-Twin
+            {uploading ? 'Uploading...' : 'Run Shadow-Twin'}
           </Button>
 
           <div className="mt-6 rounded-2xl border border-border bg-surface p-4">

@@ -4,6 +4,15 @@ from app import main
 from app.models import Item
 
 
+def test_frontend_dev_server_is_allowed_by_cors():
+    cors = next(
+        middleware for middleware in main.app.user_middleware
+        if getattr(middleware, "kwargs", {}).get("allow_methods")
+    )
+    assert "http://127.0.0.1:3000" in cors.kwargs["allow_origins"]
+    assert "http://127.0.0.1:4173" in cors.kwargs["allow_origins"]
+
+
 def test_supabase_course_is_saved_before_its_items(monkeypatch):
     calls = []
 

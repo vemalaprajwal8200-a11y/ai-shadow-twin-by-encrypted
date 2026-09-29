@@ -25,7 +25,7 @@ async function getProfileUser(client, authUser) {
   try {
     const { data, error } = await client
       .from('profiles')
-      .select('display_name, role, student_id, course_id')
+      .select('display_name, role, student_id, course_id, semester, section')
       .eq('user_id', authUser.id)
       .maybeSingle()
     if (!error && data) {
@@ -40,7 +40,7 @@ async function getProfileUser(client, authUser) {
     try {
       const { data, error } = await client
         .from('profiles')
-        .select('display_name, role, student_id, course_id')
+        .select('display_name, role, student_id, course_id, semester, section')
         .eq('id', authUser.id)
         .maybeSingle()
       if (!error && data) {
@@ -53,8 +53,11 @@ async function getProfileUser(client, authUser) {
 
   const metadata = authUser.user_metadata || {}
 
-  // 3. Single source of truth: database profiles.role is authoritative.
-  // Fall back to metadata.role or metadata.requested_role only if profile row is pending creation.
+  // Keep the profile row authoritative for role and basic identity, but do not keep stale values
+  // when the auth user metadata was updated more recently by the client.
+  const normalizedDisplayName = profileData?.display_name?.trim() || metadata.display_name?.trim() || authUser.email?.split('@')[0] || 'User'
+  const normalizedStudentId = (metadata.student_id ?? profileData?.student_id ?? '').toString().trim() || undefined
+
   let verifiedRole = 'student'
   if (profileData?.role === 'faculty') {
     verifiedRole = 'faculty'
@@ -66,13 +69,13 @@ async function getProfileUser(client, authUser) {
 
   return {
     id: authUser.id,
-    name: profileData?.display_name || metadata.display_name || authUser.email?.split('@')[0] || 'User',
+    name: normalizedDisplayName,
     email: authUser.email || '',
     role: verifiedRole,
     requestedRole: metadata.role || metadata.requested_role || verifiedRole,
-    studentId: metadata.student_id || profileData?.student_id || undefined,
-    semester: metadata.semester || '',
-    section: metadata.section || '',
+    studentId: normalizedStudentId,
+    semester: (metadata.semester ?? profileData?.semester ?? '').toString().trim(),
+    section: (metadata.section ?? profileData?.section ?? '').toString().trim(),
     courseId: profileData?.course_id || undefined,
   }
 }
@@ -212,16 +215,44 @@ export function AuthProvider({ children }) {
     },
     async updateStudentDetails({ name, studentId, semester, section }) {
       const client = getSupabaseClient()
+      const cleanedName = name.trim()
+      const cleanedStudentId = studentId.trim()
+      const cleanedSemester = semester.trim()
+      const cleanedSection = section.trim()
+
       const { data, error } = await client.auth.updateUser({
         data: {
-          display_name: name.trim(),
-          student_id: studentId.trim(),
-          semester: semester.trim(),
-          section: section.trim(),
+          display_name: cleanedName,
+          student_id: cleanedStudentId,
+          semester: cleanedSemester,
+          section: cleanedSection,
         },
       })
       if (error) throw error
       if (!data.user) throw new Error('Could not update your student details.')
+
+      try {
+        const profileRow = {
+          user_id: data.user.id,
+          id: data.user.id,
+          display_name: cleanedName,
+          student_id: cleanedStudentId,
+          course_id: user?.courseId || null,
+          role: user?.role || 'student',
+          semester: cleanedSemester,
+          section: cleanedSection,
+        }
+
+        const { error: profileError } = await client
+          .from('profiles')
+          .upsert(profileRow, { onConflict: 'user_id' })
+
+        if (profileError) {
+          console.warn('Profile sync warning:', profileError.message)
+        }
+      } catch (profileSyncError) {
+        console.warn('Profile sync warning:', profileSyncError)
+      }
 
       const profileUser = await getProfileUser(client, data.user)
       setUser(profileUser)
