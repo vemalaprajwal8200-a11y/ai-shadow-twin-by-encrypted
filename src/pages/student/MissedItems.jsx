@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, Search } from 'lucide-react'
-import { Card } from '../../components/dashboard/DashboardPrimitives'
+import { Link } from 'react-router-dom'
+import { Card, PageHeader } from '../../components/dashboard/DashboardPrimitives'
 import { StudentEmpty, StudentError, StudentOutcomePill, StudentSkeleton } from '../../components/student/StudentComponents'
+import { Input, Select } from '../../components/ui/Primitives'
 import { useAuth } from '../../auth/AuthContext'
 import { useMyStudent } from '../../hooks/useMyStudent'
 
@@ -25,19 +27,20 @@ export default function MissedItems() {
   }), [student, search, unitFilter, outcomeFilter])
 
   if (loading) return <StudentSkeleton label="Loading your missed items" />
-  if (error) return <StudentError error={error} onRetry={retry} />
-  if (!student) return <StudentEmpty>Your missed items are unavailable.</StudentEmpty>
+  const studentNotLinked = error === 'Your account is active, but this student ID is not linked to an academic record.'
+  if (error && !studentNotLinked) return <StudentError error={error} onRetry={retry} />
+  if (!student) return <StudentEmpty description="Link your student record to see course items that need review." action={<Link to="/dashboard" className="text-sm font-semibold text-primary hover:underline">Open My details</Link>}>Missed items unavailable</StudentEmpty>
 
   return (
     <div className="space-y-6">
-      <header><p className="text-sm uppercase tracking-[0.18em] text-muted">MY DASHBOARD</p><h1 className="mt-1 text-3xl font-bold text-heading">Missed items</h1><p className="mt-2 text-sm text-muted">Review your responses and the related course material.</p></header>
-      <section aria-label="Filter missed items" className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-        <label className="relative min-w-0 flex-1"><Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input aria-label="Search missed items" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search missed items" className="w-full rounded-xl border border-border bg-bg py-2.5 pl-9 pr-3 text-sm text-text placeholder:text-muted/75" /></label>
-        <label className="sr-only" htmlFor="missed-unit">Filter by unit</label><select id="missed-unit" value={unitFilter} onChange={(event) => setUnitFilter(event.target.value)} className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text"><option>All</option><option value="1">Unit 1</option><option value="2">Unit 2</option><option value="3">Unit 3</option></select>
-        <label className="sr-only" htmlFor="missed-outcome">Filter by outcome</label><select id="missed-outcome" value={outcomeFilter} onChange={(event) => setOutcomeFilter(event.target.value)} className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text"><option>All</option><option>Question error</option><option>Needs practice</option><option>Under review</option></select>
+      <PageHeader eyebrow="My dashboard" title="Missed items" description="Review your responses and the related course material." />
+      <section aria-label="Filter missed items" className="ui-card grid gap-3 p-4 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+        <Input type="search" aria-label="Search missed items" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search missed items" leadingIcon={Search} />
+        <Select id="missed-unit" label="Unit" value={unitFilter} onChange={(event) => setUnitFilter(event.target.value)}><option>All</option><option value="1">Unit 1</option><option value="2">Unit 2</option><option value="3">Unit 3</option></Select>
+        <Select id="missed-outcome" label="Outcome" value={outcomeFilter} onChange={(event) => setOutcomeFilter(event.target.value)}><option>All</option><option>Question error</option><option>Needs practice</option><option>Under review</option></Select>
         <p className="whitespace-nowrap text-sm text-muted" aria-live="polite">{items.length} items</p>
       </section>
-      {items.length === 0 ? <StudentEmpty>No missed items - great work.</StudentEmpty> : <div className="space-y-3">{items.map((item) => {
+      {items.length === 0 ? <StudentEmpty description="There are no missed items matching the current filters." action={<Link to="/topics/dashboard/plan" className="text-sm font-semibold text-primary hover:underline">Open study plan</Link>}>No missed items</StudentEmpty> : <div className="space-y-3">{items.map((item) => {
         const isExpanded = Boolean(expanded[item.itemId])
         return <Card key={item.itemId} className="overflow-hidden"><button type="button" aria-expanded={isExpanded} onClick={() => setExpanded((current) => ({ ...current, [item.itemId]: !current[item.itemId] }))} className="flex w-full items-center justify-between gap-4 p-4 text-left"><span className="min-w-0"><span className="block truncate font-semibold text-heading">{item.title}</span><span className="mt-1 block text-xs text-muted">Unit {item.unit} · {item.type}</span></span><span className="flex shrink-0 items-center gap-3"><StudentOutcomePill outcome={item.studentOutcome} /><ChevronDown aria-hidden="true" className={`h-4 w-4 text-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`} /></span></button>{isExpanded && <div className="space-y-3 border-t border-border/60 bg-bg p-4 text-sm"><div><h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Question</h2><p className="mt-1">{item.questionText}</p></div><div><h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Answer / key</h2><p className="mt-1">{item.correctAnswer}</p></div><div><h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Explanation</h2><p className="mt-1 text-muted">{item.explanation}</p></div></div>}</Card>
       })}</div>}

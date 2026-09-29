@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, CheckCircle2, CloudUpload, FileText, LayoutGrid, Sparkles } from 'lucide-react'
 import mockApi from '../api/mock'
+import { PageHeader } from '../components/dashboard/DashboardPrimitives'
+import { Badge, Button } from '../components/ui/Primitives'
 
 export default function CoursesPage({ courseId }) {
   const [courses, setCourses] = useState([])
@@ -58,12 +60,7 @@ export default function CoursesPage({ courseId }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.22em] text-muted">Course library</p>
-          <h2 className="mt-1 text-3xl font-bold text-heading">Courses and upload</h2>
-        </div>
-      </div>
+      <PageHeader eyebrow="Course library" title="Courses and upload" description="Manage course materials and start an analysis." />
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_1.5fr]">
         <div className="space-y-4">
@@ -74,9 +71,7 @@ export default function CoursesPage({ courseId }) {
                   <p className="text-xs uppercase tracking-[0.2em] text-muted">{course.code}</p>
                   <h3 className="mt-1 text-xl font-semibold text-heading">{course.title}</h3>
                 </div>
-                <span className="rounded-full bg-primary px-2 py-1 text-xs font-semibold text-primary-fg">
-                  {course.status}
-                </span>
+                <Badge tone="success">{course.status}</Badge>
               </div>
               <div className="mt-4 flex items-center justify-between text-sm text-muted">
                 <span>{course.units} units</span>
@@ -123,14 +118,13 @@ export default function CoursesPage({ courseId }) {
             ))}
           </div>
 
-          <button
-            type="button"
+          <Button
             onClick={runAnalysis}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-fg transition hover:bg-primary/90"
+            className="mt-5"
           >
             <Sparkles className="h-4 w-4" />
             Run Shadow-Twin
-          </button>
+          </Button>
 
           <div className="mt-6 rounded-2xl border border-border bg-surface p-4">
             <p className="text-sm uppercase tracking-[0.18em] text-muted">Analysis progress</p>

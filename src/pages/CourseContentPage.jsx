@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Filter, Search, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import mockApi from '../api/mock'
-import { SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
+import { PageHeader, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
+import { Badge, Input, Select } from '../components/ui/Primitives'
 
 const verdictOptions = ['All', 'Content defect', 'Ability gap', 'Clean']
 const severityOptions = ['All', 'High', 'Medium', 'Low']
@@ -59,15 +60,7 @@ export default function CourseContentPage({ courseId }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.22em] text-muted">Content review</p>
-          <h2 className="mt-1 text-3xl font-bold text-heading">Course content</h2>
-        </div>
-        <span className="rounded-xl bg-surface px-3 py-2 text-sm text-muted">
-          {filteredItems.length} items shown
-        </span>
-      </div>
+      <PageHeader eyebrow="Content review" title="Course content" description="Search and filter course materials by type and review status." actions={<Badge>{filteredItems.length} items shown</Badge>} />
 
       <div className="grid gap-5 xl:grid-cols-[260px_1fr]">
         <aside className="card p-4">
@@ -78,53 +71,38 @@ export default function CourseContentPage({ courseId }) {
 
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs uppercase tracking-[0.18em] text-muted">Type</label>
-              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="w-full rounded-xl border border-border bg-surface p-2.5 text-sm text-text">
+              <Select label="Type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                 <option>All</option>
                 <option>slide</option>
                 <option>question</option>
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs uppercase tracking-[0.18em] text-muted">Verdict</label>
-              <select value={verdictFilter} onChange={(e) => setVerdictFilter(e.target.value)} className="w-full rounded-xl border border-border bg-surface p-2.5 text-sm text-text">
+              <Select label="Verdict" value={verdictFilter} onChange={(e) => setVerdictFilter(e.target.value)}>
                 {verdictOptions.map((option) => <option key={option}>{option}</option>)}
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs uppercase tracking-[0.18em] text-muted">Severity</label>
-              <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="w-full rounded-xl border border-border bg-surface p-2.5 text-sm text-text">
+              <Select label="Severity" value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
                 {severityOptions.map((option) => <option key={option}>{option}</option>)}
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs uppercase tracking-[0.18em] text-muted">Unit</label>
-              <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)} className="w-full rounded-xl border border-border bg-surface p-2.5 text-sm text-text">
+              <Select label="Unit" value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
                 <option>All</option>
                 <option>1</option>
                 <option>2</option>
                 <option>3</option>
-              </select>
+              </Select>
             </div>
           </div>
         </aside>
 
         <div className="space-y-4">
-          <div className="card p-4">
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2">
-              <Search className="h-4 w-4 text-muted" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search slide or question text"
-                className="w-full bg-transparent text-sm text-text outline-none placeholder:text-muted"
-              />
-            </div>
-          </div>
+          <Input type="search" aria-label="Search course content" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search slide or question text" leadingIcon={Search} />
 
           {filteredItems.length === 0 ? (
             <div className="card p-10 text-center">

@@ -1,47 +1,78 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, Info } from 'lucide-react'
+import { ArrowRight, Info, Lock, LoaderCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { Card } from '../../components/dashboard/DashboardPrimitives'
-import { StudentEmpty, StudentError, StudentOutcomePill, StudentSkeleton, StudentStatusPill } from '../../components/student/StudentComponents'
+import { Card, PageHeader } from '../../components/dashboard/DashboardPrimitives'
+import { StudentError, StudentOutcomePill, StudentSkeleton, StudentStatusPill } from '../../components/student/StudentComponents'
+import { Alert, Avatar, Badge, Button, Input, Select, Toast } from '../../components/ui/Primitives'
 import { mockCourses } from '../../data/mockData'
 import { useAuth } from '../../auth/AuthContext'
 import { useMyStudent } from '../../hooks/useMyStudent'
 
 const unitTotals = [8, 7, 5]
 
-function Initials({ name }) {
-  const initials = name.split(' ').map((part) => part[0]).join('').slice(0, 2)
-  return <span aria-hidden="true" className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-primary/10 text-lg font-semibold text-primary">{initials}</span>
-}
-
-function UnlinkedStudentProfile({ user, updateStudentDetails }) {
-  const [values, setValues] = useState(() => ({
+function getProfileValues(user) {
+  return {
     name: user?.name || '',
     studentId: user?.studentId || '',
     semester: user?.semester || '',
     section: user?.section || '',
-  }))
+  }
+}
+
+function ProfileSummary({ user, student, course }) {
+  const name = user?.name || student?.name || 'Student'
+  const studentId = user?.studentId || student?.rollNo || 'Not set'
+  const semester = user?.semester || student?.semester || 'Not set'
+  const section = user?.section || student?.section || 'Not set'
+
+  return (
+    <Card className="h-full p-5 sm:p-6">
+      <div className="flex items-start gap-4">
+        <Avatar name={name} size="lg" />
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-lg font-semibold text-heading">{name}</h2>
+          <p className="mt-1 truncate text-sm text-muted">{user?.email || student?.email || 'Email not available'}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Badge tone="brand">Student</Badge>
+            {student && <StudentStatusPill status={student.status} />}
+          </div>
+        </div>
+      </div>
+      <dl className="mt-6 divide-y divide-border">
+        {[
+          ['SAN / USN', studentId],
+          ['Semester', semester],
+          ['Section', section],
+          ['Course', course?.title || 'Not assigned'],
+        ].map(([label, value]) => <div key={label} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"><dt className="text-[13px] text-muted">{label}</dt><dd className="truncate text-right text-sm font-medium text-heading">{value}</dd></div>)}
+      </dl>
+    </Card>
+  )
+}
+
+function StudentProfileEditor({ user, updateStudentDetails }) {
+  const [values, setValues] = useState(() => getProfileValues(user))
+  const [savedValues, setSavedValues] = useState(() => getProfileValues(user))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
+  const [toast, setToast] = useState('')
 
   useEffect(() => {
-    setValues({
-      name: user?.name || '',
-      studentId: user?.studentId || '',
-      semester: user?.semester || '',
-      section: user?.section || '',
-    })
+    const nextValues = getProfileValues(user)
+    setValues(nextValues)
+    setSavedValues(nextValues)
   }, [user?.id, user?.name, user?.studentId, user?.semester, user?.section])
+
+  const hasChanges = Object.keys(values).some((key) => values[key] !== savedValues[key])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
-    setMessage('')
     setSaving(true)
     try {
       await updateStudentDetails(values)
-      setMessage('Your details were saved.')
+      setSavedValues(values)
+      setToast('Your details were saved.')
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not save your details.')
     } finally {
@@ -54,40 +85,50 @@ function UnlinkedStudentProfile({ user, updateStudentDetails }) {
   }
 
   return (
-    <div className="max-w-3xl space-y-5">
-      <header>
-        <p className="text-sm uppercase tracking-[0.18em] text-muted">MY DASHBOARD</p>
-        <h1 className="mt-1 text-3xl font-bold text-heading">My details</h1>
-      </header>
-      <StudentEmpty>Academic performance has not been linked to this account yet.</StudentEmpty>
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-soft">
-        <div>
-          <label htmlFor="profile-name" className="mb-2 block text-sm font-medium text-text">Name</label>
-          <input id="profile-name" type="text" autoComplete="name" required maxLength={100} value={values.name} onChange={updateField('name')} className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text" />
-        </div>
-        <div>
-          <label htmlFor="profile-student-id" className="mb-2 block text-sm font-medium text-text">SAN / USN</label>
-          <input id="profile-student-id" type="text" required maxLength={64} value={values.studentId} onChange={updateField('studentId')} className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text" />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="profile-semester" className="mb-2 block text-sm font-medium text-text">Semester</label>
-            <input id="profile-semester" type="text" required maxLength={20} value={values.semester} onChange={updateField('semester')} className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text" />
+    <>
+      <Card className="p-5 sm:p-6">
+        <h2 className="mb-5 text-lg font-semibold text-heading">Edit details</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input id="profile-name" label="Name" helper="Enter the name used for your academic records." type="text" autoComplete="name" required maxLength={100} value={values.name} onChange={updateField('name')} />
+          <Input id="profile-student-id" label="SAN / USN" helper="Use the student ID assigned by your institution." type="text" required maxLength={64} value={values.studentId} onChange={updateField('studentId')} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select id="profile-semester" label="Semester" required value={values.semester} onChange={updateField('semester')}>
+              <option value="">Select semester</option>
+              {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'].map((semester) => <option key={semester} value={semester}>{semester}</option>)}
+            </Select>
+            <Select id="profile-section" label="Section" required value={values.section} onChange={updateField('section')}>
+              <option value="">Select section</option>
+              {['A', 'B', 'C', 'D', 'E'].map((section) => <option key={section} value={section}>{section}</option>)}
+            </Select>
           </div>
-          <div>
-            <label htmlFor="profile-section" className="mb-2 block text-sm font-medium text-text">Section</label>
-            <input id="profile-section" type="text" required maxLength={20} value={values.section} onChange={updateField('section')} className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text" />
-          </div>
-        </div>
-        <p className="text-sm text-muted">Email: {user?.email || 'Not available'}</p>
-        <div aria-live="polite" className="min-h-5">
-          {error && <p className="text-sm text-danger">{error}</p>}
-          {message && <p className="text-sm text-primary">{message}</p>}
-        </div>
-        <button type="submit" disabled={saving} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-fg disabled:opacity-70">
-          {saving ? 'Saving...' : 'Save details'}
-        </button>
-      </form>
+          <Input id="profile-email" label="Email" type="email" value={user?.email || ''} readOnly leadingIcon={Lock} helper="Managed by your account" />
+          {error && <p role="alert" className="text-sm font-medium text-danger">{error}</p>}
+          <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
+            <Button variant="secondary" onClick={() => { setValues(savedValues); setError('') }} disabled={!hasChanges || saving}>Cancel</Button>
+            <Button type="submit" disabled={!hasChanges || saving}>
+              {saving && <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />}
+              {saving ? 'Saving...' : 'Save details'}
+            </Button>
+          </footer>
+        </form>
+      </Card>
+      <Toast message={toast} onClose={() => setToast('')} />
+    </>
+  )
+}
+
+function ProfileColumns({ user, student, course, updateStudentDetails, retry, academicRecordMissing }) {
+  return (
+    <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
+      <div className="space-y-4">
+        <ProfileSummary user={user} student={student} course={course} />
+        {academicRecordMissing && <Alert
+          variant="info"
+          title="Academic record not linked"
+          action={<Button size="sm" variant="secondary" onClick={retry}>Link account</Button>}
+        >Your profile is active, but scores and course results are not connected yet.</Alert>}
+      </div>
+      <StudentProfileEditor user={user} updateStudentDetails={updateStudentDetails} />
     </div>
   )
 }
@@ -97,8 +138,16 @@ export default function MyDetails() {
   const { student, loading, error, retry } = useMyStudent(user)
 
   if (loading) return <StudentSkeleton label="Loading your dashboard" />
+  const academicRecordMissing = !student
   if (error && error !== 'Your account is active, but this student ID is not linked to an academic record.') return <StudentError error={error} onRetry={retry} />
-  if (!student) return <UnlinkedStudentProfile user={user} updateStudentDetails={updateStudentDetails} />
+  if (academicRecordMissing) {
+    return (
+      <div className="space-y-6 pb-8">
+        <PageHeader eyebrow="MY DASHBOARD" title="My details" description="Manage your profile and academic information." />
+        <ProfileColumns user={user} updateStudentDetails={updateStudentDetails} retry={retry} academicRecordMissing />
+      </div>
+    )
+  }
 
   const course = mockCourses.find((item) => item.id === student.courseId) || mockCourses[0]
   const strongestUnits = student.unitScores.map((score, index) => ({ name: `Unit ${index + 1} concepts`, score }))
@@ -116,21 +165,8 @@ export default function MyDetails() {
 
   return (
     <div className="space-y-6 pb-8">
-      <header>
-        <p className="text-sm uppercase tracking-[0.18em] text-muted">MY DASHBOARD</p>
-        <h1 className="mt-1 text-3xl font-bold text-heading">Hi, {student.name.split(' ')[0]}</h1>
-        <p className="mt-2 text-sm text-muted">Here is how you are doing in {course.title}.</p>
-      </header>
-
-      <Card className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
-        <Initials name={student.name} />
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate font-semibold text-heading">{student.name}</h2>
-          <p className="mt-1 text-sm text-muted">{user?.studentId || student.rollNo} · Semester {user?.semester || student.semester || '—'} · Section {user?.section || student.section}</p>
-          <p className="mt-1 truncate text-sm text-muted">{student.email}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2"><StudentStatusPill status={student.status} /><span className="rounded-full border border-border bg-bg px-3 py-1 text-xs text-muted">{course.title}</span></div>
-      </Card>
+      <PageHeader eyebrow="MY DASHBOARD" title="My details" description={`Your profile and performance in ${course.title}.`} />
+      <ProfileColumns user={user} student={student} course={course} updateStudentDetails={updateStudentDetails} retry={retry} academicRecordMissing={false} />
 
       <section aria-label="Your scores" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map(([label, value]) => <Card key={label} className="p-4"><div className="flex items-start justify-between gap-2"><p className="text-sm text-muted">{label}</p>{label === 'Adjusted score' && <span title="Your score after excluding questions that were confirmed to have errors." className="group relative"><Info aria-label="Your score after excluding questions that were confirmed to have errors." className="h-4 w-4 text-muted" /></span>}</div><p className="mt-3 text-3xl font-bold tabular-nums text-heading">{value}</p></Card>)}

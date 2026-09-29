@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Check } from 'lucide-react'
-import { Card } from '../../components/dashboard/DashboardPrimitives'
+import { Link } from 'react-router-dom'
+import { Card, PageHeader } from '../../components/dashboard/DashboardPrimitives'
 import { StudentEmpty, StudentError, StudentSkeleton } from '../../components/student/StudentComponents'
 import { useAuth } from '../../auth/AuthContext'
 import { useMyStudent } from '../../hooks/useMyStudent'
@@ -23,17 +24,18 @@ export default function StudyPlan() {
   useEffect(() => setCompleted({}), [student?.id])
 
   if (loading) return <StudentSkeleton label="Loading your study plan" />
-  if (error) return <StudentError error={error} onRetry={retry} />
-  if (!student) return <StudentEmpty>Your study plan is unavailable.</StudentEmpty>
+  const studentNotLinked = error === 'Your account is active, but this student ID is not linked to an academic record.'
+  if (error && !studentNotLinked) return <StudentError error={error} onRetry={retry} />
+  if (!student) return <StudentEmpty description="Link your student record to build a study plan from your results." action={<Link to="/dashboard" className="text-sm font-semibold text-primary hover:underline">Open My details</Link>}>Study plan unavailable</StudentEmpty>
 
   const doneCount = plan.filter((_, index) => completed[index]).length
   const progress = plan.length ? Math.round((doneCount / plan.length) * 100) : 0
 
   return (
     <div className="space-y-6">
-      <header><p className="text-sm uppercase tracking-[0.18em] text-muted">MY DASHBOARD</p><h1 className="mt-1 text-3xl font-bold text-heading">Study plan</h1><p className="mt-2 text-sm text-muted">A short checklist based on your own recent results.</p></header>
+      <PageHeader eyebrow="My dashboard" title="Study plan" description="A short checklist based on your own recent results." />
       <Card className="p-5"><div className="flex items-center justify-between gap-3"><h2 className="font-semibold text-heading">Progress</h2><span className="tabular-nums text-sm text-muted">{doneCount} of {plan.length}</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-border/30" role="progressbar" aria-label="Study plan progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div className="h-full rounded-full bg-primary transition-[width] motion-reduce:transition-none" style={{ width: `${progress}%` }} /></div></Card>
-      {plan.length === 0 ? <StudentEmpty>No study topics yet. Keep up the good work.</StudentEmpty> : <Card className="divide-y divide-border/50 p-5"><ol>{plan.map((item, index) => <li key={`${item.unit}-${item.title}`} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"><button type="button" aria-pressed={Boolean(completed[index])} aria-label={`${completed[index] ? 'Mark incomplete' : 'Mark complete'}: ${item.title}`} onClick={() => setCompleted((current) => ({ ...current, [index]: !current[index] }))} className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border ${completed[index] ? 'border-primary bg-primary text-primary-fg' : 'border-border bg-bg text-muted'}`}>{completed[index] && <Check aria-hidden="true" className="h-4 w-4" />}</button><div><p className={`text-sm font-medium ${completed[index] ? 'text-muted line-through' : 'text-heading'}`}>{item.title}</p><p className="mt-1 text-xs text-muted">Unit {item.unit} · Step {index + 1}</p></div></li>)}</ol></Card>}
+      {plan.length === 0 ? <StudentEmpty description="Study recommendations will appear after your course results are linked." action={<Link to="/topics/dashboard/missed" className="text-sm font-semibold text-primary hover:underline">Review missed items</Link>}>No study topics yet</StudentEmpty> : <Card className="divide-y divide-border/50 p-5"><ol>{plan.map((item, index) => <li key={`${item.unit}-${item.title}`} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"><button type="button" aria-pressed={Boolean(completed[index])} aria-label={`${completed[index] ? 'Mark incomplete' : 'Mark complete'}: ${item.title}`} onClick={() => setCompleted((current) => ({ ...current, [index]: !current[index] }))} className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border ${completed[index] ? 'border-primary bg-primary text-primary-fg' : 'border-border bg-surface text-muted'}`}>{completed[index] && <Check aria-hidden="true" className="h-4 w-4" />}</button><div><p className={`text-sm font-medium ${completed[index] ? 'text-muted line-through' : 'text-heading'}`}>{item.title}</p><p className="mt-1 text-xs text-muted">Unit {item.unit} · Step {index + 1}</p></div></li>)}</ol></Card>}
     </div>
   )
 }

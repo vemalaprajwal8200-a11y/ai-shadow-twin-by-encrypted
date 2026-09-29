@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Circle } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { getSidebarNavGroups, studentBottomTabs } from './sidebarNavConfig'
 import { useAuth } from '../auth/AuthContext'
@@ -9,7 +9,7 @@ import { useAuth } from '../auth/AuthContext'
 /**
  * @param {{ group: SidebarNavGroup, isOpen: boolean, onToggle: (open: boolean) => void }} props
  */
-function NavGroup({ group, isOpen, onToggle }) {
+function NavGroup({ group, isOpen, onToggle, onNavigate }) {
   const closeTimer = useRef(null)
   const pointerType = useRef('')
   const openOnPointerDown = useRef(false)
@@ -60,6 +60,7 @@ function NavGroup({ group, isOpen, onToggle }) {
       <div className="flex items-center gap-1">
         <NavLink
           to={group.to}
+          onClick={onNavigate}
           className={({ isActive }) => `sidebar-link min-w-0 flex-1 ${hasActiveChild ? 'parent-active' : isActive ? 'active' : ''}`}
         >
           <Icon className="h-4 w-4 shrink-0" />
@@ -102,6 +103,7 @@ function NavGroup({ group, isOpen, onToggle }) {
               <NavLink
                 key={child.label}
                 to={child.to}
+                onClick={onNavigate}
                 tabIndex={isOpen ? 0 : -1}
                 className={() => {
                   const destination = new URL(child.to, window.location.origin)
@@ -111,6 +113,7 @@ function NavGroup({ group, isOpen, onToggle }) {
                   return `sidebar-sub-link block rounded-r-lg px-3 py-2 text-sm text-sidebar-fg/80 transition hover:bg-sidebar/80 hover:text-sidebar-fg ${isActive ? 'active' : ''}`
                 }}
               >
+                <Circle aria-hidden="true" className="mr-2 inline h-2.5 w-2.5" />
                 {child.label}
               </NavLink>
             ))}
@@ -124,22 +127,25 @@ function NavGroup({ group, isOpen, onToggle }) {
 /**
  * @param {{ groups?: SidebarNavGroup[] }} props
  */
-export default function SidebarNav({ groups }) {
+export default function SidebarNav({ groups, onNavigate }) {
   const { user } = useAuth()
   const navGroups = groups || getSidebarNavGroups(user?.role === 'student' ? 'student' : 'faculty')
   const [openGroup, setOpenGroup] = useState('')
 
   return (
-    <nav aria-label="Main" className="space-y-2">
+    <nav aria-label="Main" className="space-y-5">
       {navGroups.map((group) => (
-        <NavGroup
-          key={group.to}
-          group={group}
-          isOpen={openGroup === group.to}
-          onToggle={(shouldOpen) => setOpenGroup((current) => (
-            shouldOpen ? group.to : current === group.to ? '' : current
-          ))}
-        />
+        <section key={group.to} aria-label={group.label}>
+          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-sidebar-fg/45">{group.label}</p>
+          <NavGroup
+            group={group}
+            isOpen={openGroup === group.to}
+            onNavigate={onNavigate}
+            onToggle={(shouldOpen) => setOpenGroup((current) => (
+              shouldOpen ? group.to : current === group.to ? '' : current
+            ))}
+          />
+        </section>
       ))}
     </nav>
   )

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import FacultyRoster from '../pages/dashboard/StudentDetails'
 import MyDetails from '../pages/student/MyDetails'
+import { Toast } from './ui/Primitives'
 
 /** @param {{ courseId: string }} props */
 export default function DashboardHome({ courseId }) {
@@ -32,7 +33,7 @@ export default function DashboardHome({ courseId }) {
   return (
     <>
       {user?.role === 'student' ? <MyDetails /> : <FacultyRoster courseId={courseId} />}
-      {notice && <div role="status" className="fixed right-4 top-20 z-50 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium text-text shadow-soft">{notice}</div>}
+      <Toast message={notice} onClose={() => setNotice('')} />
     </>
   )
 }

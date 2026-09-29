@@ -1,5 +1,6 @@
-import { Card } from '../../components/dashboard/DashboardPrimitives'
+import { Card, PageHeader } from '../../components/dashboard/DashboardPrimitives'
 import { StudentEmpty, StudentError, StudentSkeleton } from '../../components/student/StudentComponents'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { useMyStudent } from '../../hooks/useMyStudent'
 
@@ -9,12 +10,13 @@ export default function MyUnits() {
   const { user } = useAuth()
   const { student, loading, error, retry } = useMyStudent(user)
   if (loading) return <StudentSkeleton label="Loading your unit performance" />
-  if (error) return <StudentError error={error} onRetry={retry} />
-  if (!student) return <StudentEmpty>Your unit results are unavailable.</StudentEmpty>
+  const studentNotLinked = error === 'Your account is active, but this student ID is not linked to an academic record.'
+  if (error && !studentNotLinked) return <StudentError error={error} onRetry={retry} />
+  if (!student) return <StudentEmpty description="Link your student record to see performance by unit." action={<Link to="/dashboard" className="text-sm font-semibold text-primary hover:underline">Open My details</Link>}>Unit results unavailable</StudentEmpty>
 
   return (
     <div className="space-y-6">
-      <header><p className="text-sm uppercase tracking-[0.18em] text-muted">MY DASHBOARD</p><h1 className="mt-1 text-3xl font-bold text-heading">My units</h1><p className="mt-2 text-sm text-muted">Your scores and topics to revisit by unit.</p></header>
+      <PageHeader eyebrow="My dashboard" title="My units" description="Your scores and topics to revisit by unit." />
       <div className="grid gap-4 lg:grid-cols-3">
         {student.unitScores.map((score, index) => {
           const unit = index + 1
