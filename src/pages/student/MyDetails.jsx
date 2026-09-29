@@ -56,6 +56,7 @@ function StudentProfileEditor({ user, updateStudentDetails }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [emailDetailsOpen, setEmailDetailsOpen] = useState(false)
 
   useEffect(() => {
     const nextValues = getProfileValues(user)
@@ -101,7 +102,12 @@ function StudentProfileEditor({ user, updateStudentDetails }) {
               {['A', 'B', 'C', 'D', 'E'].map((section) => <option key={section} value={section}>{section}</option>)}
             </Select>
           </div>
-          <Input id="profile-email" label="Email" type="email" value={user?.email || ''} readOnly leadingIcon={Lock} helper="Managed by your account" />
+          <div className="space-y-1.5">
+            <Input id="profile-email" label="Email" type="email" value={user?.email || ''} readOnly leadingIcon={Lock} />
+            <button type="button" onClick={() => setEmailDetailsOpen(true)} aria-haspopup="dialog" className="inline-flex min-h-8 items-center gap-1.5 rounded-md text-xs font-medium text-muted underline decoration-border underline-offset-2 transition-colors hover:text-heading focus-visible:text-heading">
+              <Lock aria-hidden="true" className="h-3.5 w-3.5" /> Managed by your account
+            </button>
+          </div>
           {error && <p role="alert" className="text-sm font-medium text-danger">{error}</p>}
           <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
             <Button variant="secondary" onClick={() => { setValues(savedValues); setError('') }} disabled={!hasChanges || saving}>Cancel</Button>
@@ -113,6 +119,24 @@ function StudentProfileEditor({ user, updateStudentDetails }) {
         </form>
       </Card>
       <Toast message={toast} onClose={() => setToast('')} />
+      {emailDetailsOpen && <div className="fixed inset-0 z-[60] grid place-items-center bg-ink/35 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEmailDetailsOpen(false) }}>
+        <section role="dialog" aria-modal="true" aria-labelledby="email-details-title" className="w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-soft sm:p-6">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-surface-tint text-ink"><Lock aria-hidden="true" className="h-4 w-4" /></span>
+            <div className="min-w-0">
+              <h2 id="email-details-title" className="text-lg font-semibold text-heading">Managed by your account</h2>
+              <p className="mt-1 text-sm leading-5 text-muted">This email is used for sign-in and account messages. It can’t be changed from this profile form.</p>
+            </div>
+          </div>
+          <div className="mt-5 rounded-lg border border-border bg-page p-3.5">
+            <p className="text-xs font-medium text-muted">ACCOUNT EMAIL</p>
+            <p className="mt-1 break-all text-sm font-medium text-heading">{user?.email || 'Not available'}</p>
+          </div>
+          <footer className="mt-5 flex justify-end">
+            <Button variant="secondary" onClick={() => setEmailDetailsOpen(false)}>Close</Button>
+          </footer>
+        </section>
+      </div>}
     </>
   )
 }
