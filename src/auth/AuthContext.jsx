@@ -1,75 +1,124 @@
-import { createContext, useContext, useMemo, useState } from 'react'
-
-/** @typedef {{ id: string, name: string, email: string, role: 'student' | 'faculty', studentId?: string, courseId?: string }} AuthUser */
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { getSupabaseClient, isSupabaseConfigured } from '../api/supabase'
 
 const AuthContext = createContext(null)
 
-function readStoredUser() {
-  try {
-    const storedUser = localStorage.getItem('shadow-twin-user')
-    if (storedUser) {
-      const user = JSON.parse(storedUser)
-      if (user?.email && (user.role === 'student' || user.role === 'faculty')) return user
-      if (user?.email) return { ...user, id: 'faculty-legacy', name: 'Faculty', role: 'faculty' }
-    }
-    if (localStorage.getItem('shadow-twin-token')) return { id: 'faculty-legacy', name: 'Faculty', email: 'faculty@campus.edu', role: 'faculty' }
-  } catch {
-    return null
+async function getProfileUser(client, authUser) {
+  const { data, error } = await client
+    .from('profiles')
+    .select('display_name, role, student_id, course_id')
+    .eq('id', authUser.id)
+    .maybeSingle()
+
+  if (error || !data) {
+    throw new Error('Account profile unavailable. Run the Supabase auth setup SQL and try again.')
   }
-  return null
+
+  return {
+    id: authUser.id,
+    name: data.display_name || authUser.email?.split('@')[0] || 'User',
+    email: authUser.email || '',
+    role: data.role === 'faculty' ? 'faculty' : 'student',
+    studentId: data.student_id || undefined,
+    courseId: data.course_id || undefined,
+  }
 }
 
 /** @param {{ children: import('react').ReactNode }} props */
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(readStoredUser)
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(isSupabaseConfigured)
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setLoading(false)
+      return undefined
+    }
+
+    let active = true
+    let requestId = 0
+    const client = getSupabaseClient()
+
+    const syncUser = async (authUser) => {
+      const currentRequest = ++requestId
+      if (!authUser) {
+        if (active) {
+          setUser(null)
+          setLoading(false)
+        }
+        return
+      }
+
+      setLoading(true)
+      try {
+        const profileUser = await getProfileUser(client, authUser)
+        if (active && currentRequest === requestId) setUser(profileUser)
+      } catch {
+        if (active && currentRequest === requestId) setUser(null)
+      } finally {
+        if (active && currentRequest === requestId) setLoading(false)
+      }
+    }
+
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      void syncUser(session?.user || null)
+    })
+
+    client.auth.getSession()
+      .then(({ data, error }) => {
+        if (error) throw error
+        return syncUser(data.session?.user || null)
+      })
+      .catch(() => {
+        if (active) {
+          setUser(null)
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [])
 
   const value = useMemo(() => ({
     user,
+    loading,
     isAuthenticated: Boolean(user),
-    async login(email, password, role = 'student') {
-      const normalizedEmail = email.trim()
-      if (!normalizedEmail || password.length < 4) {
-        throw new Error('Enter an email and a password with at least 4 characters.')
-      }
-      if (role !== 'student' && role !== 'faculty') throw new Error('Choose a valid account role.')
+    configured: isSupabaseConfigured(),
+    async requestEmailCode(email, { register = false, displayName = '' } = {}) {
+      const client = getSupabaseClient()
+      const options = register
+        ? { shouldCreateUser: true, data: { display_name: displayName.trim() } }
+        : { shouldCreateUser: false }
+      const { error } = await client.auth.signInWithOtp({
+        email: email.trim(),
+        options,
+      })
+      if (error) throw error
+    },
+    async verifyEmailCode(email, token) {
+      const client = getSupabaseClient()
+      const { data, error } = await client.auth.verifyOtp({
+        email: email.trim(),
+        token: token.trim(),
+        type: 'email',
+      })
+      if (error) throw error
+      if (!data.user) throw new Error('Email verification did not return an account.')
 
-      // TODO: Replace this mock check with the real API or Cognito sign-in call.
-      // TODO: Read the role and studentId from the verified token claims instead of the login form.
-      const isDemoStudent = normalizedEmail.toLowerCase() === 'student.demo@campus.edu'
-      const nextUser = role === 'student'
-        ? {
-          id: 'student-001',
-          name: isDemoStudent ? 'Avery Example' : normalizedEmail.split('@')[0],
-          email: normalizedEmail,
-          role,
-          studentId: 'student-001',
-          courseId: 'intro-data-structures',
-        }
-        : {
-          id: `faculty-${normalizedEmail.toLowerCase()}`,
-          name: normalizedEmail.toLowerCase() === 'faculty@campus.edu' ? 'Dr. Priya Nair' : normalizedEmail.split('@')[0],
-          email: normalizedEmail,
-          role,
-        }
-      setUser(nextUser)
-      try {
-        localStorage.setItem('shadow-twin-user', JSON.stringify(nextUser))
-        localStorage.setItem('shadow-twin-token', 'mock-faculty-token')
-      } catch {
-        // Keep the session active for this tab when browser storage is unavailable.
-      }
-      return nextUser
+      const profileUser = await getProfileUser(client, data.user)
+      setUser(profileUser)
+      return profileUser
     },
-    logout() {
+    async logout() {
+      const client = getSupabaseClient()
+      const { error } = await client.auth.signOut()
+      if (error) throw error
       setUser(null)
-      try {
-        localStorage.removeItem('shadow-twin-user')
-        localStorage.removeItem('shadow-twin-token')
-      } catch {
-        // The in-memory session is still cleared.
-      }
     },
-  }), [user])
+  }), [user, loading])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -118,8 +118,8 @@ async def create_course(file: UploadFile = File(...)):
                 contents,
                 file.content_type or "application/octet-stream",
             )
-        save_items(items)
         save_course(course_id, original_filename, len(items))
+        save_items(items)
     except StorageError:
         path.unlink(missing_ok=True)
         return JSONResponse(status_code=503, content={"error": "Storage backend request failed."})

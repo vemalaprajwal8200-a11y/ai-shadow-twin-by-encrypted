@@ -11,3 +11,4 @@ uploads/
 *.env
 !.env.example
 .env.example
+app/env.example

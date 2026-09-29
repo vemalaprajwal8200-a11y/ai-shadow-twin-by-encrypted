@@ -2,14 +2,21 @@
 
 ## Local setup
 
-Keep real credentials in local environment files or your hosting provider's secret store. Do not commit `.env` files. In PowerShell, create local files from the examples only when they do not already exist, then replace placeholders with your own values:
+Keep real credentials in local environment files or your hosting provider's secret store. Do not commit `.env` files. Vite reads the repository-root `.env.local`; the backend reads `backend/.env`. Create the frontend file from the public-variable template:
 
 ```powershell
-if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
-if (-not (Test-Path frontend/.env)) { Copy-Item frontend/.env.example frontend/.env }
+if (-not (Test-Path .env.local)) { Copy-Item frontend/.env.example .env.local }
 ```
 
-The backend reads `GEMINI_API_KEY` and `GEMINI_MODEL`, with optional `GEMINI_BASE_URL`, plus `STORAGE_BACKEND`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET`, `API_KEY`, `RUNS_PER_PERSONA`, and `MAX_CONCURRENCY`. Never put service-role keys or other backend secrets in frontend code.
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` from Supabase Project Settings → API. These are public browser credentials; never put a service-role key in a `VITE_` variable. Create `backend/.env` separately for backend settings such as `GEMINI_API_KEY`, `GEMINI_MODEL`, `STORAGE_BACKEND`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and `SUPABASE_BUCKET`.
+
+## Email OTP registration
+
+Run `backend/docs/supabase_auth_schema.sql` in the Supabase SQL Editor to create the profile table, row-level security policy, new-user trigger, and profiles for existing Auth users. In Supabase Authentication settings, enable the Email provider and email confirmation; set both the **Confirm signup** and **Magic Link** email templates to include `{{ .Token }}` so registration and sign-in send codes. Configure custom SMTP for reliable production delivery. Restart Vite after editing `.env.local`.
+
+New registrations receive the `student` role. Grant faculty access only to approved users by running the commented profile update at the end of `backend/docs/supabase_auth_schema.sql` in the SQL Editor with their email address.
+
+The backend reads `GEMINI_API_KEY` and `GEMINI_MODEL`, with optional `GEMINI_BASE_URL`, plus `API_KEY`, `RUNS_PER_PERSONA`, and `MAX_CONCURRENCY`. Never put service-role keys or other backend secrets in frontend code.
 
 Enable the repository's staged-secret check once per clone:
 
