@@ -12,9 +12,9 @@ Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` from Supaba
 
 ## Email registration and sign-in
 
-Run `backend/docs/supabase_auth_schema.sql` in the Supabase SQL Editor to create the profile table, row-level security policy, new-user trigger, and profiles for existing Auth users. In Supabase Authentication settings, enable the Email provider and turn **Confirm email** off to allow direct account creation without OTP or email links. Configure SMTP only if you later enable email-based verification or recovery. Restart Vite after editing `.env.local`.
+Run `backend/docs/supabase_auth_schema.sql` in the Supabase SQL Editor to create the profile table, row-level security policy, new-user trigger, and profiles for existing Auth users. In Supabase Authentication settings, enable the Email provider. To deliver numeric codes, update both the **Magic Link** and **Confirm signup** email templates to include `{{ .Token }}` instead of relying only on `{{ .ConfirmationURL }}`. Configure custom SMTP under Authentication settings for reliable delivery; Supabase's default mail service is rate-limited and may only deliver to project-authorized addresses. Add your local and production site URLs to the Auth URL configuration, then restart Vite after changing `.env.local`.
 
-Registration collects a name, USN/student ID, email, and password, then signs the new account in directly. New accounts receive the `student` role, and the USN/student ID is stored in `profiles.student_id`. Grant faculty access only to approved users by running the commented profile update at the end of `backend/docs/supabase_auth_schema.sql` in the SQL Editor with their email address. Disabling email confirmation means users can register with an address they have not proven they own.
+Sign-in emails a code only for existing users. Registration offers student or faculty member. Students provide a USN/student ID. Faculty registration records a request but grants only the default student role until an administrator approves it with the commented profile update at the end of `backend/docs/supabase_auth_schema.sql`.
 
 The backend reads `GEMINI_API_KEY` and `GEMINI_MODEL`, with optional `GEMINI_BASE_URL`, plus `API_KEY`, `RUNS_PER_PERSONA`, and `MAX_CONCURRENCY`. Never put service-role keys or other backend secrets in frontend code.
 
