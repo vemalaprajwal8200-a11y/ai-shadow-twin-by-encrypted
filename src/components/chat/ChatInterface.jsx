@@ -196,7 +196,7 @@ export default function ChatInterface({
       onToken: (token) => {
         setStreamingContent((prev) => prev + token)
       },
-      onComplete: ({ text, itemCards, sources: replySources, isOffline, warning }) => {
+      onComplete: ({ text, itemCards, sources: replySources, isOffline, errorCode, warning }) => {
         setIsStreaming(false)
         setStreamingContent('')
         abortControllerRef.current = null
@@ -218,14 +218,18 @@ export default function ChatInterface({
         updateCurrentChatMessages((currentMsgs) => [...currentMsgs, assistantMessage])
 
         if (isOffline && warning) {
-          setOfflineError('Twin is offline (using local course context). You can retry connecting to the API anytime.')
+          setOfflineError(warning)
+        } else {
+          // Successful live reply — clear any stale offline banner
+          setOfflineError(null)
         }
       },
       onError: (err) => {
         setIsStreaming(false)
         setStreamingContent('')
         abortControllerRef.current = null
-        setOfflineError(err.message || 'Twin API is unavailable.')
+        const codeStr = err.code ? ` [${err.code}]` : ''
+        setOfflineError(`${err.message || 'Twin API is unavailable.'}${codeStr}`)
       },
     })
   }

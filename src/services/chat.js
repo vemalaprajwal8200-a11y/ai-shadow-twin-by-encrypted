@@ -215,13 +215,17 @@ export async function sendChatMessageStream({
     if (!response.ok) {
       const errText = await response.text()
       let parsedError = 'API endpoint unavailable.'
+      let parsedCode = 'API_ERROR'
       try {
         const json = JSON.parse(errText)
         if (json.error) parsedError = json.error
+        if (json.code) parsedCode = json.code
       } catch {
         if (errText) parsedError = errText
       }
-      throw new Error(parsedError)
+      const err = new Error(parsedError)
+      err.code = parsedCode
+      throw err
     }
 
     const contentType = response.headers.get('content-type') || ''
@@ -273,15 +277,27 @@ export async function sendChatMessageStream({
     if (error.name === 'AbortError') {
       return
     }
-    console.warn('Backend API stream failed, using offline fallback:', error.message)
-    
+    console.warn('Backend API failed, using offline fallback. Code:', error.code, '| Message:', error.message)
+
     // Simulate offline streaming fallback so app works end-to-end smoothly
     const lastUserMessage = messages[messages.length - 1]?.content || ''
     const { replyText, itemCards, sources } = generateOfflineMockResponse(lastUserMessage, courseId, unitId, persona)
-    
+
     let currentPos = 0
     const chunkSize = 4
-    let accumulatedText = ''
+
+    // Human-readable hint based on the error code
+    const codeHints = {
+      MISSING_API_KEY: 'GEMINI_API_KEY is not set in Vercel → fix it to go live',
+      INVALID_KEY: 'API key rejected (401/403) — check the key value in Vercel',
+      RATE_LIMIT: 'Rate limit hit (429) — wait a moment, then retry',
+      MODEL_NOT_FOUND: 'Model not found (404) — check GEMINI_MODEL env var',
+      PROVIDER_ERROR: 'Provider returned a server error — see Vercel Logs',
+      API_ERROR: 'API error — see Vercel Logs for details',
+    }
+    const hint = error.code && codeHints[error.code]
+      ? `[${error.code}] ${codeHints[error.code]}`
+      : error.message || 'Twin is offline'
 
     const interval = setInterval(() => {
       if (signal?.aborted) {
@@ -295,13 +311,13 @@ export async function sendChatMessageStream({
           text: replyText,
           itemCards,
           sources,
-          isOffline: true, // indicates offline banner state if needed
-          warning: 'Twin is offline (using local course material context)',
+          isOffline: true,
+          errorCode: error.code || 'API_ERROR',
+          warning: hint,
         })
       } else {
         const nextChunk = replyText.slice(currentPos, currentPos + chunkSize)
         currentPos += chunkSize
-        accumulatedText += nextChunk
         onToken(nextChunk)
       }
     }, 25)

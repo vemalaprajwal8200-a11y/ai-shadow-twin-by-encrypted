@@ -96,15 +96,16 @@ export default async function chatHandler(req, res) {
 
   const geminiApiKey = process.env.GEMINI_API_KEY
   const geminiBaseUrl = process.env.GEMINI_BASE_URL?.trim()
-  const geminiModel = process.env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash'
+  const geminiModel = process.env.GEMINI_MODEL?.trim() || process.env.MODEL?.trim() || 'gemini-2.0-flash'
   const apiKey = geminiApiKey || process.env.OPENAI_API_KEY || process.env.LLM_API_KEY
 
   if (!apiKey) {
-    res.statusCode = 530
+    console.error('[chat] No API key configured. Set GEMINI_API_KEY or OPENAI_API_KEY in Vercel environment variables.')
+    res.statusCode = 500
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({
-      error: 'LLM API key not configured in environment variables. Twin is offline.',
-      isOffline: true,
+      error: 'API key not configured. Set GEMINI_API_KEY in Vercel → Settings → Environment Variables.',
+      code: 'MISSING_API_KEY',
     }))
     return
   }
@@ -201,10 +202,16 @@ export default async function chatHandler(req, res) {
       })
 
       if (!geminiRes.ok) {
-        const errJson = await geminiRes.text()
-        res.statusCode = geminiRes.status
+        const errBody = await geminiRes.text()
+        console.error(`[chat] Gemini API error ${geminiRes.status}:`, errBody)
+        const code =
+          geminiRes.status === 401 || geminiRes.status === 403 ? 'INVALID_KEY'
+          : geminiRes.status === 404 ? 'MODEL_NOT_FOUND'
+          : geminiRes.status === 429 ? 'RATE_LIMIT'
+          : 'PROVIDER_ERROR'
+        res.statusCode = geminiRes.status >= 400 && geminiRes.status < 500 ? geminiRes.status : 502
         res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ error: `Gemini API error: ${errJson}` }))
+        res.end(JSON.stringify({ error: `Gemini error (${geminiRes.status}). Check Vercel Logs for details.`, code }))
         return
       }
 
@@ -264,7 +271,7 @@ export default async function chatHandler(req, res) {
       : 'https://api.openai.com/v1/chat/completions'
     const model = useGeminiOpenAiEndpoint
       ? geminiModel
-      : process.env.OPENAI_MODEL || 'gpt-4o-mini'
+      : process.env.OPENAI_MODEL || process.env.MODEL || 'gpt-4o-mini'
     const providerName = useGeminiOpenAiEndpoint ? 'Gemini OpenAI-compatible' : 'OpenAI'
     try {
       const openAiRes = await fetch(endpoint, {
@@ -286,10 +293,16 @@ export default async function chatHandler(req, res) {
       })
 
       if (!openAiRes.ok) {
-        const errText = await openAiRes.text()
-        res.statusCode = openAiRes.status
+        const errBody = await openAiRes.text()
+        console.error(`[chat] ${providerName} error ${openAiRes.status}:`, errBody)
+        const code =
+          openAiRes.status === 401 || openAiRes.status === 403 ? 'INVALID_KEY'
+          : openAiRes.status === 404 ? 'MODEL_NOT_FOUND'
+          : openAiRes.status === 429 ? 'RATE_LIMIT'
+          : 'PROVIDER_ERROR'
+        res.statusCode = openAiRes.status >= 400 && openAiRes.status < 500 ? openAiRes.status : 502
         res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ error: `${providerName} API error: ${errText}` }))
+        res.end(JSON.stringify({ error: `${providerName} error (${openAiRes.status}). Check Vercel Logs for details.`, code }))
         return
       }
 
