@@ -17,10 +17,12 @@ async function getProfileUser(client, authUser) {
   const metadata = authUser.user_metadata || {}
   return {
     id: authUser.id,
-    name: data?.display_name || metadata.display_name || authUser.email?.split('@')[0] || 'User',
+    name: metadata.display_name || data?.display_name || authUser.email?.split('@')[0] || 'User',
     email: authUser.email || '',
     role: data?.role === 'faculty' ? 'faculty' : 'student',
-    studentId: data?.student_id || metadata.student_id || undefined,
+    studentId: metadata.student_id || data?.student_id || undefined,
+    semester: metadata.semester || '',
+    section: metadata.section || '',
     courseId: data?.course_id || undefined,
   }
 }
@@ -112,6 +114,23 @@ export function AuthProvider({ children }) {
       const profileUser = await getProfileUser(client, data.user)
       setUser(profileUser)
       return { user: profileUser }
+    },
+    async updateStudentDetails({ name, studentId, semester, section }) {
+      const client = getSupabaseClient()
+      const { data, error } = await client.auth.updateUser({
+        data: {
+          display_name: name.trim(),
+          student_id: studentId.trim(),
+          semester: semester.trim(),
+          section: section.trim(),
+        },
+      })
+      if (error) throw error
+      if (!data.user) throw new Error('Could not update your student details.')
+
+      const profileUser = await getProfileUser(client, data.user)
+      setUser(profileUser)
+      return profileUser
     },
     async loginWithEmail(email, password) {
       const client = getSupabaseClient()

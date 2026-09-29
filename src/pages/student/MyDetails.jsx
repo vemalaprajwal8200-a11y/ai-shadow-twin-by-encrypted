@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { ArrowRight, Info } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/dashboard/DashboardPrimitives'
@@ -13,13 +14,91 @@ function Initials({ name }) {
   return <span aria-hidden="true" className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-primary/10 text-lg font-semibold text-primary">{initials}</span>
 }
 
+function UnlinkedStudentProfile({ user, updateStudentDetails }) {
+  const [values, setValues] = useState(() => ({
+    name: user?.name || '',
+    studentId: user?.studentId || '',
+    semester: user?.semester || '',
+    section: user?.section || '',
+  }))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    setValues({
+      name: user?.name || '',
+      studentId: user?.studentId || '',
+      semester: user?.semester || '',
+      section: user?.section || '',
+    })
+  }, [user?.id, user?.name, user?.studentId, user?.semester, user?.section])
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+    setMessage('')
+    setSaving(true)
+    try {
+      await updateStudentDetails(values)
+      setMessage('Your details were saved.')
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Could not save your details.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const updateField = (field) => (event) => {
+    setValues((current) => ({ ...current, [field]: event.target.value }))
+  }
+
+  return (
+    <div className="max-w-3xl space-y-5">
+      <header>
+        <p className="text-sm uppercase tracking-[0.18em] text-muted">MY DASHBOARD</p>
+        <h1 className="mt-1 text-3xl font-bold text-heading">My details</h1>
+      </header>
+      <StudentEmpty>Academic performance has not been linked to this account yet.</StudentEmpty>
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-soft">
+        <div>
+          <label htmlFor="profile-name" className="mb-2 block text-sm font-medium text-text">Name</label>
+          <input id="profile-name" type="text" autoComplete="name" required maxLength={100} value={values.name} onChange={updateField('name')} className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text" />
+        </div>
+        <div>
+          <label htmlFor="profile-student-id" className="mb-2 block text-sm font-medium text-text">SAN / USN</label>
+          <input id="profile-student-id" type="text" required maxLength={64} value={values.studentId} onChange={updateField('studentId')} className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="profile-semester" className="mb-2 block text-sm font-medium text-text">Semester</label>
+            <input id="profile-semester" type="text" required maxLength={20} value={values.semester} onChange={updateField('semester')} className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text" />
+          </div>
+          <div>
+            <label htmlFor="profile-section" className="mb-2 block text-sm font-medium text-text">Section</label>
+            <input id="profile-section" type="text" required maxLength={20} value={values.section} onChange={updateField('section')} className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text" />
+          </div>
+        </div>
+        <p className="text-sm text-muted">Email: {user?.email || 'Not available'}</p>
+        <div aria-live="polite" className="min-h-5">
+          {error && <p className="text-sm text-danger">{error}</p>}
+          {message && <p className="text-sm text-primary">{message}</p>}
+        </div>
+        <button type="submit" disabled={saving} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-fg disabled:opacity-70">
+          {saving ? 'Saving...' : 'Save details'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 export default function MyDetails() {
-  const { user } = useAuth()
+  const { user, updateStudentDetails } = useAuth()
   const { student, loading, error, retry } = useMyStudent(user)
 
   if (loading) return <StudentSkeleton label="Loading your dashboard" />
-  if (error) return <StudentError error={error} onRetry={retry} />
-  if (!student) return <StudentEmpty>Your student details are unavailable.</StudentEmpty>
+  if (error && error !== 'Your account is active, but this student ID is not linked to an academic record.') return <StudentError error={error} onRetry={retry} />
+  if (!student) return <UnlinkedStudentProfile user={user} updateStudentDetails={updateStudentDetails} />
 
   const course = mockCourses.find((item) => item.id === student.courseId) || mockCourses[0]
   const strongestUnits = student.unitScores.map((score, index) => ({ name: `Unit ${index + 1} concepts`, score }))
@@ -47,7 +126,7 @@ export default function MyDetails() {
         <Initials name={student.name} />
         <div className="min-w-0 flex-1">
           <h2 className="truncate font-semibold text-heading">{student.name}</h2>
-          <p className="mt-1 text-sm text-muted">{student.rollNo} · Section {student.section}</p>
+          <p className="mt-1 text-sm text-muted">{user?.studentId || student.rollNo} · Semester {user?.semester || student.semester || '—'} · Section {user?.section || student.section}</p>
           <p className="mt-1 truncate text-sm text-muted">{student.email}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2"><StudentStatusPill status={student.status} /><span className="rounded-full border border-border bg-bg px-3 py-1 text-xs text-muted">{course.title}</span></div>
