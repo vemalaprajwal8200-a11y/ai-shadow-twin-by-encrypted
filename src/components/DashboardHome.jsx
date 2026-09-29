@@ -12,9 +12,14 @@ export default function DashboardHome({ courseId }) {
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
-    if (!location.state?.accessDenied) return undefined
-    const targetRole = location.state.intendedRole || 'faculty'
-    setNotice(`That area is for ${targetRole === 'faculty' ? 'faculty' : 'students'}.`)
+    if (location.state?.facultyAccessPending) {
+      setNotice('Email verified. Faculty access is pending administrator approval; your account has student access for now.')
+    } else if (location.state?.accessDenied) {
+      const targetRole = location.state.intendedRole || 'faculty'
+      setNotice(`That area is for ${targetRole === 'faculty' ? 'faculty' : 'students'}.`)
+    } else {
+      return undefined
+    }
     navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state: null })
   }, [location.pathname, location.search, location.hash, location.state, navigate])
 

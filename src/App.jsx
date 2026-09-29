@@ -1,3 +1,4 @@
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import { LoginRoute, ProtectedRoute, RoleRoute } from './components/RouteGuards'
@@ -6,20 +7,19 @@ import { AuthProvider } from './auth/AuthContext'
 import { useDarkMode } from './hooks/useDarkMode'
 
 import About from './pages/About'
-import CoursesPage from './pages/CoursesPage'
-import CourseContentPage from './pages/CourseContentPage'
-import ItemDetailPage from './pages/ItemDetailPage'
-import QualityReportPage from './pages/QualityReportPage'
-import SettingsPage from './pages/SettingsPage'
-import MyUnits from './pages/student/MyUnits'
-import MissedItems from './pages/student/MissedItems'
-import StudyPlan from './pages/student/StudyPlan'
-import StudentSettings from './pages/student/StudentSettings'
-import StudentCourseContent from './pages/student/StudentCourseContent'
-import SidebarSubtopicPage from './pages/SidebarSubtopicPage'
+const CoursesPage = lazy(() => import('./pages/CoursesPage'))
+const CourseContentPage = lazy(() => import('./pages/CourseContentPage'))
+const ItemDetailPage = lazy(() => import('./pages/ItemDetailPage'))
+const QualityReportPage = lazy(() => import('./pages/QualityReportPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const MyUnits = lazy(() => import('./pages/student/MyUnits'))
+const MissedItems = lazy(() => import('./pages/student/MissedItems'))
+const StudyPlan = lazy(() => import('./pages/student/StudyPlan'))
+const StudentSettings = lazy(() => import('./pages/student/StudentSettings'))
+const StudentCourseContent = lazy(() => import('./pages/student/StudentCourseContent'))
+const SidebarSubtopicPage = lazy(() => import('./pages/SidebarSubtopicPage'))
 import { sidebarNavSubtopics } from './components/sidebarNavConfig'
 import { mockCourses } from './data/mockData'
-import { useEffect, useState } from 'react'
 import { useAuth } from './auth/AuthContext'
 
 function NotFoundRedirect() {
@@ -46,6 +46,7 @@ function AppRoutes() {
   const [courseId, setCourseId] = useState(mockCourses[0].id)
 
   return (
+    <Suspense fallback={<div className="grid min-h-screen place-items-center text-muted">Loading…</div>}>
     <Routes>
       <Route path="/" element={<About />} />
       <Route path="/login" element={<LoginRoute />} />
@@ -92,6 +93,7 @@ function AppRoutes() {
       </Route>
       <Route path="*" element={<NotFoundRedirect />} />
     </Routes>
+    </Suspense>
   )
 }
 

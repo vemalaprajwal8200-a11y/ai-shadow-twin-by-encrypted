@@ -20,6 +20,9 @@ async function getProfileUser(client, authUser) {
     name: metadata.display_name || data?.display_name || authUser.email?.split('@')[0] || 'User',
     email: authUser.email || '',
     role: data?.role === 'faculty' ? 'faculty' : 'student',
+    requestedRole: data?.role === 'faculty'
+      ? 'faculty'
+      : metadata.requested_role === 'faculty' ? 'faculty' : 'student',
     studentId: metadata.student_id || data?.student_id || undefined,
     semester: metadata.semester || '',
     section: metadata.section || '',
@@ -90,30 +93,25 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(user),
     configured: isSupabaseConfigured(),
-    async registerWithEmail(email, password, displayName = '', studentId = '') {
+    async sendEmailCode(
+      email,
+      { shouldCreateUser = false, displayName = '', studentId = '', requestedRole = 'student' } = {},
+    ) {
       const client = getSupabaseClient()
-      const { data, error } = await client.auth.signUp({
+      const { error } = await client.auth.signInWithOtp({
         email: email.trim(),
-        password,
         options: {
-          data: {
-            display_name: displayName.trim(),
-            student_id: studentId.trim(),
-          },
+          shouldCreateUser,
+          ...(shouldCreateUser && {
+            data: {
+              display_name: displayName.trim(),
+              student_id: studentId.trim(),
+              requested_role: requestedRole === 'faculty' ? 'faculty' : 'student',
+            },
+          }),
         },
       })
       if (error) throw error
-      if (!data.user) throw new Error('Account registration did not return a user.')
-      if (!data.session) {
-        if (data.user.identities?.length === 0) {
-          throw new Error('An account with this email may already exist. Try signing in instead.')
-        }
-        return { requiresEmailConfirmation: true }
-      }
-
-      const profileUser = await getProfileUser(client, data.user)
-      setUser(profileUser)
-      return { user: profileUser }
     },
     async updateStudentDetails({ name, studentId, semester, section }) {
       const client = getSupabaseClient()
@@ -132,14 +130,15 @@ export function AuthProvider({ children }) {
       setUser(profileUser)
       return profileUser
     },
-    async loginWithEmail(email, password) {
+    async verifyEmailCode(email, code) {
       const client = getSupabaseClient()
-      const { data, error } = await client.auth.signInWithPassword({
+      const { data, error } = await client.auth.verifyOtp({
         email: email.trim(),
-        password,
+        token: code.trim(),
+        type: 'email',
       })
       if (error) throw error
-      if (!data.user) throw new Error('Sign in did not return an account.')
+      if (!data.user) throw new Error('The email code did not return an account.')
 
       const profileUser = await getProfileUser(client, data.user)
       setUser(profileUser)
