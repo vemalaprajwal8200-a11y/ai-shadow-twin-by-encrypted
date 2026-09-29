@@ -6,7 +6,7 @@ import logging
 
 from fastapi.testclient import TestClient
 
-from app import chat_api, chat_service
+from app import chat_api, chat_config, chat_service
 from app.chat_providers import ChatProviderError, ProviderReply
 from app.main import app
 
@@ -54,6 +54,13 @@ def test_openai_success(monkeypatch, caplog):
     assert calls["n"] == 1
     _assert_no_secrets(response.text)
     _assert_no_secrets(caplog.text)
+
+
+def test_placeholder_key_and_model_fallbacks(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "replace-with-a-new-openai-key")
+    monkeypatch.setenv("OPENAI_MODELS", "gpt-4o-mini,gpt-4.1-mini")
+    assert chat_config.openai_configured() is False
+    assert chat_config.openai_model_candidates() == ["gpt-4o-mini", "gpt-4.1-mini"]
 
 
 def test_openai_fails_returns_502(monkeypatch, caplog):

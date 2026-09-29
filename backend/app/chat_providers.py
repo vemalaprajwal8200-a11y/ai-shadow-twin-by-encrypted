@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from app.chat_config import (
     gemini_api_key,
     gemini_model,
+    gemini_model_candidates,
     openai_api_key,
     openai_model,
+    openai_model_candidates,
     system_prompt,
     timeout_s,
 )
@@ -76,36 +78,58 @@ def complete_openai(message: str, history: list[dict[str, str]]) -> ProviderRepl
     from openai import APIStatusError, APITimeoutError, OpenAI, RateLimitError
 
     key = openai_api_key()
-    model = openai_model()
+    model_candidates = openai_model_candidates() or [openai_model()]
     client = OpenAI(api_key=key, timeout=timeout_s(), max_retries=0)
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=_build_openai_messages(message, history),
-        )
-    except APITimeoutError as exc:
-        raise ChatProviderError("OpenAI request timed out.", retryable=True) from exc
-    except RateLimitError as exc:
-        raise ChatProviderError(
-            "OpenAI rate limited the request.",
-            status_code=429,
-            retryable=True,
-        ) from exc
-    except APIStatusError as exc:
-        status = _openai_status(exc)
-        raise ChatProviderError(
-            "OpenAI request failed.",
-            status_code=status,
-            retryable=_retryable_status(status),
-        ) from exc
-    except Exception as exc:
-        raise ChatProviderError("OpenAI request failed.", retryable=False) from exc
+    last_exc: Exception | None = None
 
-    text = (response.choices[0].message.content or "").strip() if response.choices else ""
-    if not text:
-        raise ChatProviderError("OpenAI returned an empty reply.", status_code=502, retryable=True)
-    used_model = getattr(response, "model", None) or model
-    return ProviderReply(text=text, provider="openai", model=used_model)
+    for model in model_candidates:
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=_build_openai_messages(message, history),
+            )
+        except APITimeoutError as exc:
+            last_exc = exc
+            if model != model_candidates[-1]:
+                continue
+            raise ChatProviderError("OpenAI request timed out.", retryable=True) from exc
+        except RateLimitError as exc:
+            last_exc = exc
+            if model != model_candidates[-1]:
+                continue
+            raise ChatProviderError(
+                "OpenAI rate limited the request.",
+                status_code=429,
+                retryable=True,
+            ) from exc
+        except APIStatusError as exc:
+            last_exc = exc
+            if model != model_candidates[-1] and _openai_status(exc) in {400, 404, 422}:
+                continue
+            raise ChatProviderError(
+                "OpenAI request failed.",
+                status_code=_openai_status(exc),
+                retryable=_retryable_status(_openai_status(exc)),
+            ) from exc
+        except Exception as exc:
+            last_exc = exc
+            if model != model_candidates[-1]:
+                continue
+            raise ChatProviderError("OpenAI request failed.", retryable=False) from exc
+
+        text = (response.choices[0].message.content or "").strip() if response.choices else ""
+        if not text:
+            if model != model_candidates[-1]:
+                continue
+            raise ChatProviderError("OpenAI returned an empty reply.", status_code=502, retryable=True)
+        used_model = getattr(response, "model", None) or model
+        return ProviderReply(text=text, provider="openai", model=used_model)
+
+    raise ChatProviderError(
+        "OpenAI request failed.",
+        status_code=getattr(last_exc, "status_code", None) if last_exc else 502,
+        retryable=False,
+    )
 
 
 def _build_gemini_contents(message: str, history: list[dict[str, str]]) -> list[dict[str, object]]:
@@ -123,35 +147,45 @@ def complete_gemini(message: str, history: list[dict[str, str]]) -> ProviderRepl
     from google.genai import types
 
     key = gemini_api_key()
-    model = gemini_model()
+    model_candidates = gemini_model_candidates() or [gemini_model()]
     timeout_ms = int(timeout_s() * 1000)
     client = genai.Client(api_key=key)
-    try:
-        response = client.models.generate_content(
-            model=model,
-            contents=_build_gemini_contents(message, history),
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt(),
-                http_options=types.HttpOptions(timeout=timeout_ms),
-            ),
-        )
-    except TimeoutError as exc:
-        raise ChatProviderError("Gemini request timed out.", retryable=True) from exc
-    except Exception as exc:
-        status = _genai_status(exc)
-        retryable = isinstance(exc, TimeoutError) or _retryable_status(status)
-        if status is None and isinstance(exc, getattr(genai_errors, "ServerError", ())):
-            retryable = True
-        raise ChatProviderError(
-            "Gemini request failed.",
-            status_code=status,
-            retryable=retryable,
-        ) from exc
 
-    text = (getattr(response, "text", None) or "").strip()
-    if not text:
-        raise ChatProviderError("Gemini returned an empty reply.", status_code=502, retryable=True)
-    return ProviderReply(text=text, provider="gemini", model=model)
+    for model in model_candidates:
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=_build_gemini_contents(message, history),
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt(),
+                    http_options=types.HttpOptions(timeout=timeout_ms),
+                ),
+            )
+        except TimeoutError as exc:
+            if model != model_candidates[-1]:
+                continue
+            raise ChatProviderError("Gemini request timed out.", retryable=True) from exc
+        except Exception as exc:
+            status = _genai_status(exc)
+            retryable = isinstance(exc, TimeoutError) or _retryable_status(status)
+            if status is None and isinstance(exc, getattr(genai_errors, "ServerError", ())):
+                retryable = True
+            if model != model_candidates[-1] and status in {400, 404, 422}:
+                continue
+            raise ChatProviderError(
+                "Gemini request failed.",
+                status_code=status,
+                retryable=retryable,
+            ) from exc
+
+        text = (getattr(response, "text", None) or "").strip()
+        if not text:
+            if model != model_candidates[-1]:
+                continue
+            raise ChatProviderError("Gemini returned an empty reply.", status_code=502, retryable=True)
+        return ProviderReply(text=text, provider="gemini", model=model)
+
+    raise ChatProviderError("Gemini request failed.", status_code=502, retryable=True)
 
 
 def openai_model_exists() -> bool:

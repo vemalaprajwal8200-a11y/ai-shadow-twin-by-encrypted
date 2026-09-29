@@ -19,25 +19,63 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 DEFAULT_TIMEOUT_S = 30.0
 
+_PLACEHOLDER_VALUES = {
+    "replace-with-a-new-openai-key",
+    "replace-with-a-new-gemini-key",
+    "your_openai_api_key_here",
+    "your_gemini_api_key_here",
+    "your_api_key_here",
+    "demo",
+    "test",
+    "placeholder",
+}
+
 
 def _trimmed(name: str) -> str:
     return (os.getenv(name) or "").strip()
 
 
+def _split_csv(value: str) -> list[str]:
+    return [part.strip() for part in (value or "").split(",") if part.strip()]
+
+
+def _is_placeholder(value: str) -> bool:
+    normalized = value.strip().lower()
+    if not normalized:
+        return True
+    return normalized in _PLACEHOLDER_VALUES or "replace-with" in normalized or "your_" in normalized
+
+
 def openai_api_key() -> str:
-    return _trimmed("OPENAI_API_KEY")
+    value = _trimmed("OPENAI_API_KEY")
+    return value if not _is_placeholder(value) else ""
 
 
 def gemini_api_key() -> str:
-    return _trimmed("GEMINI_API_KEY")
+    value = _trimmed("GEMINI_API_KEY")
+    return value if not _is_placeholder(value) else ""
+
+
+def openai_model_candidates() -> list[str]:
+    models = _split_csv(_trimmed("OPENAI_MODELS")) or _split_csv(_trimmed("OPENAI_MODEL"))
+    if not models:
+        models = [DEFAULT_OPENAI_MODEL]
+    return [model for model in models if model and not _is_placeholder(model)]
+
+
+def gemini_model_candidates() -> list[str]:
+    models = _split_csv(_trimmed("GEMINI_MODELS")) or _split_csv(_trimmed("GEMINI_MODEL"))
+    if not models:
+        models = [DEFAULT_GEMINI_MODEL]
+    return [model for model in models if model and not _is_placeholder(model)]
 
 
 def openai_model() -> str:
-    return _trimmed("OPENAI_MODEL") or DEFAULT_OPENAI_MODEL
+    return openai_model_candidates()[0] if openai_model_candidates() else DEFAULT_OPENAI_MODEL
 
 
 def gemini_model() -> str:
-    return _trimmed("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+    return gemini_model_candidates()[0] if gemini_model_candidates() else DEFAULT_GEMINI_MODEL
 
 
 def provider_order() -> list[str]:
