@@ -15,6 +15,9 @@ function NavGroup({ group, isOpen, onToggle }) {
   const location = useLocation()
   const panelId = `sidebar-submenu-${group.to.replace(/[^a-z0-9]+/gi, '-')}`
   const Icon = group.icon
+  const hasActiveChild = group.children.some((child) => (
+    new URL(child.to, window.location.origin).pathname === location.pathname
+  ))
 
   const cancelClose = () => {
     if (closeTimer.current) {
@@ -56,7 +59,7 @@ function NavGroup({ group, isOpen, onToggle }) {
       <div className="flex items-center gap-1">
         <NavLink
           to={group.to}
-          className={({ isActive }) => `sidebar-link min-w-0 flex-1 ${isActive ? 'active' : ''}`}
+          className={({ isActive }) => `sidebar-link min-w-0 flex-1 ${isActive || hasActiveChild ? 'active' : ''}`}
         >
           <Icon className="h-4 w-4 shrink-0" />
           <span className="truncate">{group.label}</span>
