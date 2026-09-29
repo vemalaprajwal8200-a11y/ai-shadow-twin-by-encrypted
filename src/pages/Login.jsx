@@ -1,65 +1,100 @@
 import { useState } from 'react'
-import { ArrowLeft, MailCheck } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft, LogIn, UserPlus } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { Alert, Button, Card, Input, Select } from '../components/ui/Primitives'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { configured, sendEmailCode, verifyEmailCode } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { configured, registerWithEmail, loginWithEmail, sendPasswordReset, updatePassword } = useAuth()
   const [mode, setMode] = useState('signin')
   const [accountType, setAccountType] = useState('student')
   const [name, setName] = useState('')
   const [studentId, setStudentId] = useState('')
   const [email, setEmail] = useState('')
-  const [codeSent, setCodeSent] = useState(false)
-  const [code, setCode] = useState('')
+  const [confirmationSent, setConfirmationSent] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [recoveryMessage, setRecoveryMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const isRecoveryRequest = searchParams.get('recovery') === 'request'
+  const isPasswordReset = searchParams.get('recovery') === 'complete'
+  const isRecovery = isRecoveryRequest || isPasswordReset
 
-  const sendCode = async () => {
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+    setMessage('')
+
+    if ((mode === 'register' || isPasswordReset) && password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+    if ((mode === 'register' || isPasswordReset) && password.length < 8) {
+      setError('Use a password with at least 8 characters.')
+      return
+    }
+
+    if (isRecoveryRequest) {
+      setLoading(true)
+      try {
+        await sendPasswordReset(email)
+        setRecoveryMessage('If an account exists for that email, a password reset link has been sent.')
+      } catch (resetError) {
+        setError(resetError instanceof Error ? resetError.message : 'Could not send a password reset link.')
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
+    if (isPasswordReset) {
+      setLoading(true)
+      try {
+        await updatePassword(password)
+        navigate('/dashboard', { replace: true })
+      } catch (resetError) {
+        setError(resetError instanceof Error ? resetError.message : 'Could not update your password.')
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
     setError('')
     setMessage('')
     if (mode === 'register' && (!name.trim() || (accountType === 'student' && !studentId.trim()))) {
       setError(accountType === 'student' ? 'Enter your name and USN / Student ID.' : 'Enter your name.')
       return
     }
-    setLoading(true)
-    try {
-      await sendEmailCode(email, {
-        shouldCreateUser: mode === 'register',
-        displayName: name,
-        studentId,
-        requestedRole: accountType,
-      })
-      setCodeSent(true)
-      setMessage('If this address can sign in, a verification code has been sent. Check your inbox and spam folder.')
-    } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : 'Could not send a verification code.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    if (!codeSent) {
-      await sendCode()
+    if (mode === 'register' && password !== confirmPassword) {
+      setError('Passwords do not match.')
       return
     }
-
-    setError('')
-    setMessage('')
     setLoading(true)
     try {
-      const user = await verifyEmailCode(email, code)
-      const facultyAccessPending = mode === 'register'
-        && accountType === 'faculty'
-        && user.role !== 'faculty'
-      navigate('/dashboard', { replace: true, state: { facultyAccessPending } })
+      if (mode === 'register') {
+        const result = await registerWithEmail(email, password, {
+          displayName: name,
+          studentId,
+          requestedRole: accountType,
+        })
+        if (result.requiresEmailConfirmation) {
+          setConfirmationSent(true)
+          setMessage(`Check ${email} and confirm your account. The link will return you to the production sign-in page.`)
+          return
+        }
+
+        navigate('/dashboard', { replace: true })
+      } else {
+        await loginWithEmail(email, password)
+        navigate('/dashboard', { replace: true })
+      }
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Could not verify that code.')
+      setError(submitError instanceof Error ? submitError.message : mode === 'register' ? 'Could not create your account.' : 'Could not sign in.')
     } finally {
       setLoading(false)
     }
@@ -69,9 +104,24 @@ export default function Login() {
     setMode(nextMode)
     setError('')
     setMessage('')
-    setCode('')
-    setCodeSent(false)
+    setConfirmationSent(false)
     setAccountType('student')
+    setPassword('')
+    setConfirmPassword('')
+  }
+
+  const beginPasswordReset = () => {
+    setSearchParams({ recovery: 'request' })
+    setError('')
+    setMessage('')
+  }
+
+  const cancelPasswordReset = () => {
+    setSearchParams({})
+    setError('')
+    setRecoveryMessage('')
+    setPassword('')
+    setConfirmPassword('')
   }
 
   return (
@@ -82,16 +132,22 @@ export default function Login() {
           <span className="mt-1 block text-xl font-semibold text-heading">Shadow-Twin</span>
         </Link>
 
-        <h1 id="auth-title" className="text-[22px] font-semibold text-heading">{mode === 'register' ? 'Create your account' : 'Sign in'}</h1>
+  <h1 id="auth-title" className="mb-2 text-[22px] font-semibold text-heading">
+          {isPasswordReset ? 'Choose a new password' : isRecoveryRequest ? 'Reset your password' : mode === 'register' ? 'Create your account' : 'Sign in'}
+        </h1>
 
         <p className="mb-6 text-sm text-muted">
-          {codeSent
-            ? `Enter the verification code sent to ${email}.`
+          {isPasswordReset
+            ? 'Choose a new password for your account.'
+            : isRecoveryRequest
+              ? 'Enter your account email and we will send you a reset link.'
+              : confirmationSent
+            ? 'Confirm your email, then sign in with the email and password you registered.'
             : mode === 'register'
-              ? 'Choose your account type and enter your details.'
-              : 'We will email you a one-time verification code.'}
+              ? 'Choose your account type and set a password.'
+              : 'Sign in with your email and password.'}
         </p>
-        {!codeSent && <div className="mb-5 grid grid-cols-2 rounded-lg border border-border bg-page p-1" role="group" aria-label="Choose sign-in or registration">
+  {!confirmationSent && !isRecovery && <div className="mb-5 grid grid-cols-2 rounded-lg border border-border bg-page p-1" role="group" aria-label="Choose sign-in or registration">
           <button type="button" aria-pressed={mode === 'signin'} onClick={() => changeMode('signin')} className={`min-h-10 rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === 'signin' ? 'bg-surface text-heading shadow-sm' : 'text-muted hover:text-text'}`}>
             Sign in
           </button>
@@ -101,7 +157,7 @@ export default function Login() {
         </div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!codeSent && mode === 'register' && <>
+          {!confirmationSent && !isRecovery && mode === 'register' && <>
             <div>
               <Select
                 id="account-type"
@@ -144,7 +200,7 @@ export default function Login() {
               />
             </div>}
           </>}
-          <div>
+          {!isPasswordReset && <div>
             <Input
               id="email"
               label="Email"
@@ -152,40 +208,51 @@ export default function Login() {
               autoComplete="email"
               required
               value={email}
-              readOnly={codeSent}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@university.edu"
             />
-          </div>
-          {codeSent && <div>
+          </div>}
+          {!confirmationSent && !isRecoveryRequest && <div>
             <Input
-              id="verification-code"
-              label="Verification code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={8}
+              id="password"
+              label="Password"
+              type="password"
+              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+              minLength={mode === 'register' || isPasswordReset ? 8 : undefined}
               required
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\s/g, ''))}
-              placeholder="Enter the code from your email"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>}
+          {!confirmationSent && (mode === 'register' || isPasswordReset) && <div>
+            <Input
+              id="confirm-password"
+              label="Confirm password"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              required
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
             />
           </div>}
           <div aria-live="polite" aria-atomic="true" className="min-h-5">
             {!configured && <Alert variant="warning" title="Supabase is not configured">Set the Supabase project URL and anon key in the root environment file.</Alert>}
             {error && <Alert variant="danger">{error}</Alert>}
             {message && <Alert variant="success">{message}</Alert>}
+            {recoveryMessage && <Alert variant="success">{recoveryMessage}</Alert>}
           </div>
-          <Button type="submit" disabled={loading || !configured} className="w-full">
-            <MailCheck aria-hidden="true" className="h-4 w-4" />
-            {loading ? codeSent ? 'Verifying code...' : 'Sending code...' : codeSent ? 'Verify code' : mode === 'register' ? 'Email me a registration code' : 'Email me a sign-in code'}
+          {!confirmationSent && <Button type="submit" disabled={loading || !configured} className="w-full">
+            {mode === 'register' ? <UserPlus aria-hidden="true" className="h-4 w-4" /> : <LogIn aria-hidden="true" className="h-4 w-4" />}
+            {loading
+              ? isPasswordReset ? 'Updating password...' : isRecoveryRequest ? 'Sending reset link...' : mode === 'register' ? 'Creating account...' : 'Signing in...'
+              : isPasswordReset ? 'Update password' : isRecoveryRequest ? 'Email reset link' : mode === 'register' ? 'Create account' : 'Sign in'}
           </Button>
+          }
         </form>
 
-        {codeSent && <div className="mt-4 flex justify-between text-sm">
-          <button type="button" onClick={() => void sendCode()} disabled={loading} className="font-medium text-primary underline underline-offset-2 disabled:opacity-60">Resend code</button>
-          <button type="button" onClick={() => { setCodeSent(false); setCode(''); setMessage(''); setError('') }} className="font-medium text-muted underline underline-offset-2">Change email</button>
-        </div>}
+        {!confirmationSent && mode === 'signin' && !isRecovery && <button type="button" onClick={beginPasswordReset} className="mt-4 text-sm font-medium text-primary underline underline-offset-2">Forgot password?</button>}
+        {isRecovery && <button type="button" onClick={cancelPasswordReset} className="mt-4 text-sm font-medium text-muted underline underline-offset-2">Back to sign in</button>}
 
         <Link to="/" className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-heading"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to About</Link>
       </Card>
