@@ -5,30 +5,75 @@ const AuthContext = createContext(null)
 const EMAIL_CONFIRMATION_URL = 'https://ai-shadow-twin-by-encrypted.vercel.app/login'
 const PASSWORD_RECOVERY_URL = 'https://ai-shadow-twin-by-encrypted.vercel.app/login?recovery=complete'
 
-async function getProfileUser(client, authUser) {
-  const { data, error } = await client
-    .from('profiles')
-    .select('display_name, role, student_id, course_id')
-    .eq('id', authUser.id)
-    .maybeSingle()
+/**
+ * Returns the canonical dashboard path for a given role.
+ * @param {'student' | 'faculty' | string | undefined} role
+ * @returns {string}
+ */
+export function getDashboardPath(role) {
+  return role === 'faculty' ? '/faculty/dashboard' : '/student/dashboard'
+}
 
-  if (error && error.code !== 'PGRST205') {
-    throw new Error('Account profile unavailable. Run the Supabase auth setup SQL and try again.')
+/**
+ * Resolves user profile from Supabase profiles table (single source of truth).
+ * Handles compatibility with tables having user_id, id, or both.
+ */
+async function getProfileUser(client, authUser) {
+  let profileData = null
+
+  // 1. Try querying by user_id
+  try {
+    const { data, error } = await client
+      .from('profiles')
+      .select('display_name, role, student_id, course_id')
+      .eq('user_id', authUser.id)
+      .maybeSingle()
+    if (!error && data) {
+      profileData = data
+    }
+  } catch {
+    // If user_id column is not present, fall through to id
+  }
+
+  // 2. Fallback querying by id if user_id was not matched
+  if (!profileData) {
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .select('display_name, role, student_id, course_id')
+        .eq('id', authUser.id)
+        .maybeSingle()
+      if (!error && data) {
+        profileData = data
+      }
+    } catch {
+      // profiles table might be inaccessible
+    }
   }
 
   const metadata = authUser.user_metadata || {}
+
+  // 3. Single source of truth: database profiles.role is authoritative.
+  // Fall back to metadata.role or metadata.requested_role only if profile row is pending creation.
+  let verifiedRole = 'student'
+  if (profileData?.role === 'faculty') {
+    verifiedRole = 'faculty'
+  } else if (profileData?.role === 'student') {
+    verifiedRole = 'student'
+  } else if (metadata.role === 'faculty' || metadata.requested_role === 'faculty') {
+    verifiedRole = 'faculty'
+  }
+
   return {
     id: authUser.id,
-    name: metadata.display_name || data?.display_name || authUser.email?.split('@')[0] || 'User',
+    name: profileData?.display_name || metadata.display_name || authUser.email?.split('@')[0] || 'User',
     email: authUser.email || '',
-    role: data?.role === 'faculty' ? 'faculty' : 'student',
-    requestedRole: data?.role === 'faculty' || metadata.requested_role === 'faculty'
-      ? 'faculty'
-      : 'student',
-    studentId: metadata.student_id || data?.student_id || undefined,
+    role: verifiedRole,
+    requestedRole: metadata.role || metadata.requested_role || verifiedRole,
+    studentId: metadata.student_id || profileData?.student_id || undefined,
     semester: metadata.semester || '',
     section: metadata.section || '',
-    courseId: data?.course_id || undefined,
+    courseId: profileData?.course_id || undefined,
   }
 }
 
@@ -60,18 +105,26 @@ export function AuthProvider({ children }) {
       setLoading(true)
       try {
         const profileUser = await getProfileUser(client, authUser)
-        if (active && currentRequest === requestId) setUser(profileUser)
+        if (active && currentRequest === requestId) {
+          setUser(profileUser)
+        }
       } catch {
-        if (active && currentRequest === requestId) setUser(null)
+        if (active && currentRequest === requestId) {
+          setUser(null)
+        }
       } finally {
-        if (active && currentRequest === requestId) setLoading(false)
+        if (active && currentRequest === requestId) {
+          setLoading(false)
+        }
       }
     }
 
+    // Listen for auth events (sign in, sign out, token refresh)
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
       void syncUser(session?.user || null)
     })
 
+    // Initial session lookup
     client.auth.getSession()
       .then(({ data, error }) => {
         if (error) throw error
@@ -95,8 +148,11 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(user),
     configured: isSupabaseConfigured(),
-    async registerWithEmail(email, password, { displayName = '', studentId = '', requestedRole = 'student' } = {}) {
+    async registerWithEmail(email, password, { displayName = '', studentId = '', role = 'student', requestedRole = '', inviteCode = '' } = {}) {
       const client = getSupabaseClient()
+      const targetRole = (role === 'faculty' || requestedRole === 'faculty') ? 'faculty' : 'student'
+
+      // Pass role directly in options.data.role so it survives the email confirmation round-trip
       const { data, error } = await client.auth.signUp({
         email: email.trim(),
         password,
@@ -105,7 +161,9 @@ export function AuthProvider({ children }) {
           data: {
             display_name: displayName.trim(),
             student_id: studentId.trim(),
-            requested_role: requestedRole === 'faculty' ? 'faculty' : 'student',
+            role: targetRole,
+            requested_role: targetRole, // backward-compatibility with existing schema triggers
+            invite_code: inviteCode.trim(),
           },
         },
       })
@@ -116,6 +174,7 @@ export function AuthProvider({ children }) {
       }
       if (!data.session) return { requiresEmailConfirmation: true }
 
+      // Session exists (auto-confirm enabled): fetch profile before returning
       const profileUser = await getProfileUser(client, data.user)
       setUser(profileUser)
       return { user: profileUser }
@@ -129,6 +188,7 @@ export function AuthProvider({ children }) {
       if (error) throw error
       if (!data.user) throw new Error('Sign-in did not return an account.')
 
+      // Wait for session and profile fetch before finishing login
       const profileUser = await getProfileUser(client, data.user)
       setUser(profileUser)
       return profileUser
@@ -169,9 +229,10 @@ export function AuthProvider({ children }) {
     },
     async logout() {
       const client = getSupabaseClient()
+      // Clear cached role immediately to prevent any stale role state
+      setUser(null)
       const { error } = await client.auth.signOut()
       if (error) throw error
-      setUser(null)
     },
   }), [user, loading])
 

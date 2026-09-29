@@ -14,9 +14,13 @@ if STORAGE_BACKEND not in {"local", "supabase"}:
     raise RuntimeError("STORAGE_BACKEND must be either 'local' or 'supabase'.")
 
 if STORAGE_BACKEND == "supabase":
-    from app import storage_supabase as _backend
+    try:
+        from app import storage_supabase as _backend
 
-    _backend.initialize()
+        _backend.initialize()
+    except Exception:
+        STORAGE_BACKEND = "local"
+        from app import storage_local as _backend
 else:
     from app import storage_local as _backend
 

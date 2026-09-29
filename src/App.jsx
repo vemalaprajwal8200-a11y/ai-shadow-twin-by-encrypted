@@ -70,6 +70,7 @@ function AppRoutes() {
         <Route path="content/:itemId" element={<ItemDetailPage />} />
 
         <Route element={<RoleRoute allowedRoles={['student']} />}>
+          <Route path="student/dashboard" element={<DashboardHome courseId={courseId} />} />
           <Route path="topics/dashboard/my-units" element={<MyUnits />} />
           <Route path="topics/dashboard/missed" element={<MissedItems />} />
           <Route path="topics/dashboard/plan" element={<StudyPlan />} />
@@ -77,6 +78,7 @@ function AppRoutes() {
         </Route>
 
         <Route element={<RoleRoute allowedRoles={['faculty']} />}>
+          <Route path="faculty/dashboard" element={<DashboardHome courseId={courseId} />} />
           <Route path="courses" element={<CoursesPage courseId={courseId} />} />
           <Route path="content" element={<CourseContentPage courseId={courseId} />} />
           <Route path="report" element={<QualityReportPage />} />
