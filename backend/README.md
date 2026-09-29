@@ -34,6 +34,18 @@ uvicorn app.main:app --reload
 
 Open the interactive API page at `http://127.0.0.1:8000/docs`.
 
+### OpenRouter chat setup
+
+The `/chat` endpoint reads `backend/test.env` (shell environment variables take precedence). Set `OPENROUTER_API_KEY`, `OPENROUTER_MODEL=openai/gpt-4o`, and `CHAT_PROVIDER_ORDER=openrouter,openai` there. OpenRouter is tried first; candidates in `OPENROUTER_MODELS` are tried in order, followed by direct OpenAI if its key is configured. Keep the key on the backend only; never add it to frontend code or commit it.
+
+Verify a live chat request from `backend/` with:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/chat_smoke_test.py
+```
+
+The script reports the provider, selected model, latency, and a short reply without printing API keys.
+
 ## Supabase setup
 
 1. In the Supabase SQL Editor, run `docs/supabase_schema.sql`.

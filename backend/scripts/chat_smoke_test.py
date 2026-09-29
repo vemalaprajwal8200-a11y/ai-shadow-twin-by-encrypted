@@ -12,7 +12,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BACKEND_DIR / "test.env", override=False)
 sys.path.insert(0, str(BACKEND_DIR))
 
-from app.chat_config import gemini_api_key, openai_api_key  # noqa: E402
+from app.chat_config import openai_api_key, openrouter_api_key  # noqa: E402
 from app.main import app  # noqa: E402
 
 
@@ -45,8 +45,8 @@ def _run_provider(client: TestClient, provider: str, has_key: bool) -> int:
 def main() -> int:
     client = TestClient(app)
     failed = 0
+    failed += _run_provider(client, "openrouter", bool(openrouter_api_key()))
     failed += _run_provider(client, "openai", bool(openai_api_key()))
-    failed += _run_provider(client, "gemini", bool(gemini_api_key()))
     return failed
 
 

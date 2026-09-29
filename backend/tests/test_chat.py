@@ -6,7 +6,7 @@ import logging
 
 from fastapi.testclient import TestClient
 
-from app import chat_api, chat_config, chat_service
+from app import chat_api, chat_config, chat_providers, chat_service
 from app.chat_providers import ChatProviderError, ProviderReply
 from app.main import app
 
@@ -20,11 +20,12 @@ def _client() -> TestClient:
 
 def _enable_both(monkeypatch, openai_on=True, gemini_on=True):
     monkeypatch.setattr(chat_service, "openai_configured", lambda: openai_on)
-    monkeypatch.setattr(chat_service, "gemini_configured", lambda: gemini_on)
+    monkeypatch.setattr(chat_service, "openrouter_configured", lambda: False)
     monkeypatch.setattr(chat_api, "openai_configured", lambda: openai_on)
-    monkeypatch.setattr(chat_api, "gemini_configured", lambda: gemini_on)
+    monkeypatch.setattr(chat_api, "openrouter_configured", lambda: False)
     monkeypatch.setenv("OPENAI_API_KEY", LEAK_OPENAI if openai_on else "")
     monkeypatch.setenv("GEMINI_API_KEY", LEAK_GEMINI if gemini_on else "")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
 
 
 def _assert_no_secrets(text: str) -> None:
@@ -61,6 +62,62 @@ def test_placeholder_key_and_model_fallbacks(monkeypatch):
     monkeypatch.setenv("OPENAI_MODELS", "gpt-4o-mini,gpt-4.1-mini")
     assert chat_config.openai_configured() is False
     assert chat_config.openai_model_candidates() == ["gpt-4o-mini", "gpt-4.1-mini"]
+
+
+def test_openrouter_config_and_model_candidates(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test-key")
+    monkeypatch.setenv("OPENROUTER_MODELS", "openai/gpt-4o,openai/gpt-4o-mini")
+    assert chat_config.openrouter_configured() is True
+    assert chat_config.openrouter_model_candidates() == ["openai/gpt-4o", "openai/gpt-4o-mini"]
+
+
+def test_openrouter_request_uses_compatible_endpoint(monkeypatch):
+    import openai
+    from types import SimpleNamespace
+
+    captured = {}
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            captured["client"] = kwargs
+
+            def create(**request):
+                captured["request"] = request
+                return SimpleNamespace(
+                    choices=[SimpleNamespace(message=SimpleNamespace(content="OpenRouter reply"))],
+                    model="openai/gpt-4o",
+                )
+
+            self.chat = SimpleNamespace(completions=SimpleNamespace(create=create))
+
+    monkeypatch.setattr(openai, "OpenAI", FakeClient)
+    monkeypatch.setattr(chat_providers, "openrouter_api_key", lambda: "sk-or-test-key")
+    monkeypatch.setattr(chat_providers, "openrouter_model_candidates", lambda: ["openai/gpt-4o"])
+    reply = chat_providers.complete_openrouter("hello", [])
+    assert reply.text == "OpenRouter reply"
+    assert reply.provider == "openrouter"
+    assert captured["client"]["base_url"] == "https://openrouter.ai/api/v1"
+    assert captured["client"]["default_headers"]["HTTP-Referer"].startswith("https://")
+    assert captured["request"]["model"] == "openai/gpt-4o"
+
+
+def test_openrouter_chat_route(monkeypatch):
+    _enable_both(monkeypatch, openai_on=False, gemini_on=False)
+    monkeypatch.setattr(chat_service, "openrouter_configured", lambda: True)
+    monkeypatch.setattr(chat_api, "openrouter_configured", lambda: True)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test-key")
+    monkeypatch.setenv("CHAT_PROVIDER_ORDER", "openrouter")
+    monkeypatch.setitem(
+        chat_service.PROVIDERS,
+        "openrouter",
+        lambda message, _history: ProviderReply(
+            text=f"echo:{message}", provider="openrouter", model="openai/gpt-4o"
+        ),
+    )
+    response = _client().post("/chat", json={"message": "hello", "provider": "openrouter"})
+    assert response.status_code == 200
+    assert response.json()["provider"] == "openrouter"
+    assert response.json()["reply"] == "echo:hello"
 
 
 def test_openai_fails_returns_502(monkeypatch, caplog):

@@ -7,12 +7,12 @@ import re
 import time
 from dataclasses import dataclass
 
-from app.chat_config import gemini_configured, openai_configured, provider_order
+from app.chat_config import openai_configured, openrouter_configured, provider_order
 from app.chat_providers import (
     ChatProviderError,
     ProviderReply,
-    complete_gemini,
     complete_openai,
+    complete_openrouter,
 )
 
 logger = logging.getLogger("app.chat")
@@ -23,6 +23,7 @@ _SECRET_RE = re.compile(
 )
 
 PROVIDERS = {
+    "openrouter": complete_openrouter,
     "openai": complete_openai,
 }
 
@@ -47,6 +48,8 @@ def redact(value: object) -> str:
 
 
 def _has_key(name: str) -> bool:
+    if name == "openrouter":
+        return openrouter_configured()
     if name == "openai":
         return openai_configured()
     return False

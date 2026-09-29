@@ -12,12 +12,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
 from app.chat_config import (
-    gemini_configured,
-    gemini_model,
     openai_configured,
     openai_model,
+    openrouter_configured,
+    openrouter_model,
 )
-from app.chat_providers import gemini_model_exists, openai_model_exists
+from app.chat_providers import openai_model_exists, openrouter_model_exists
 from app.chat_service import ChatServiceError, redact, run_chat
 
 logger = logging.getLogger("app.chat")
@@ -25,7 +25,7 @@ logger = logging.getLogger("app.chat")
 MAX_MESSAGE_LEN = 4000
 MAX_HISTORY = 20
 ALLOWED_ROLES = {"user", "assistant"}
-ALLOWED_PROVIDERS = {"openai"}
+ALLOWED_PROVIDERS = {"openai", "openrouter"}
 
 
 class ChatTurn(BaseModel):
@@ -69,7 +69,7 @@ def _validate_payload(raw: dict[str, Any]) -> ChatRequest:
     if payload.provider is not None:
         provider = payload.provider.strip().lower()
         if provider not in ALLOWED_PROVIDERS:
-            raise ValueError("provider must be openai or gemini")
+            raise ValueError("provider must be openrouter or openai")
         payload.provider = provider
     history = payload.history or []
     if len(history) > MAX_HISTORY:
@@ -132,6 +132,10 @@ async def handle_post_chat(request: Request) -> JSONResponse:
 
 def handle_chat_health(deep: bool = False) -> dict[str, Any]:
     payload: dict[str, Any] = {
+        "openrouter": {
+            "configured": openrouter_configured(),
+            "model": openrouter_model(),
+        },
         "openai": {
             "configured": openai_configured(),
             "model": openai_model(),
@@ -140,6 +144,8 @@ def handle_chat_health(deep: bool = False) -> dict[str, Any]:
     if not deep:
         return payload
 
+    if openrouter_configured():
+        payload["openrouter"]["status"] = "ok" if openrouter_model_exists() else "not-found"
     if openai_configured():
         payload["openai"]["status"] = "ok" if openai_model_exists() else "not-found"
     return payload

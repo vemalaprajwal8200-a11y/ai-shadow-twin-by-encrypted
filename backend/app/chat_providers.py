@@ -11,6 +11,9 @@ from app.chat_config import (
     openai_api_key,
     openai_model,
     openai_model_candidates,
+    openrouter_api_key,
+    openrouter_model,
+    openrouter_model_candidates,
     system_prompt,
     timeout_s,
 )
@@ -74,61 +77,95 @@ def _build_openai_messages(message: str, history: list[dict[str, str]]) -> list[
     return messages
 
 
-def complete_openai(message: str, history: list[dict[str, str]]) -> ProviderReply:
+def _complete_openai_compatible(
+    provider: str,
+    key: str,
+    model_candidates: list[str],
+    message: str,
+    history: list[dict[str, str]],
+    base_url: str | None = None,
+    default_headers: dict[str, str] | None = None,
+) -> ProviderReply:
     from openai import APIStatusError, APITimeoutError, OpenAI, RateLimitError
 
-    key = openai_api_key()
-    model_candidates = openai_model_candidates() or [openai_model()]
-    client = OpenAI(api_key=key, timeout=timeout_s(), max_retries=0)
-    last_exc: Exception | None = None
+    client = OpenAI(
+        api_key=key,
+        base_url=base_url,
+        default_headers=default_headers,
+        timeout=timeout_s(),
+        max_retries=0,
+    )
 
-    for model in model_candidates:
+    for index, model in enumerate(model_candidates):
+        has_next_model = index < len(model_candidates) - 1
         try:
             response = client.chat.completions.create(
                 model=model,
                 messages=_build_openai_messages(message, history),
             )
         except APITimeoutError as exc:
-            last_exc = exc
-            if model != model_candidates[-1]:
+            if has_next_model:
                 continue
-            raise ChatProviderError("OpenAI request timed out.", retryable=True) from exc
+            raise ChatProviderError(f"{provider} request timed out.", retryable=True) from exc
         except RateLimitError as exc:
-            last_exc = exc
-            if model != model_candidates[-1]:
+            if has_next_model:
                 continue
             raise ChatProviderError(
-                "OpenAI rate limited the request.",
+                f"{provider} rate limited the request.",
                 status_code=429,
                 retryable=True,
             ) from exc
         except APIStatusError as exc:
-            last_exc = exc
-            if model != model_candidates[-1] and _openai_status(exc) in {400, 404, 422}:
+            status_code = _openai_status(exc)
+            if has_next_model and status_code not in {401, 403}:
                 continue
             raise ChatProviderError(
-                "OpenAI request failed.",
-                status_code=_openai_status(exc),
-                retryable=_retryable_status(_openai_status(exc)),
+                f"{provider} request failed.",
+                status_code=status_code,
+                retryable=_retryable_status(status_code),
             ) from exc
         except Exception as exc:
-            last_exc = exc
-            if model != model_candidates[-1]:
+            if has_next_model:
                 continue
-            raise ChatProviderError("OpenAI request failed.", retryable=False) from exc
+            raise ChatProviderError(f"{provider} request failed.", retryable=False) from exc
 
         text = (response.choices[0].message.content or "").strip() if response.choices else ""
         if not text:
-            if model != model_candidates[-1]:
+            if has_next_model:
                 continue
-            raise ChatProviderError("OpenAI returned an empty reply.", status_code=502, retryable=True)
+            raise ChatProviderError(f"{provider} returned an empty reply.", status_code=502, retryable=True)
         used_model = getattr(response, "model", None) or model
-        return ProviderReply(text=text, provider="openai", model=used_model)
+        return ProviderReply(text=text, provider=provider, model=used_model)
 
-    raise ChatProviderError(
-        "OpenAI request failed.",
-        status_code=getattr(last_exc, "status_code", None) if last_exc else 502,
-        retryable=False,
+    raise ChatProviderError(f"{provider} request failed.", status_code=502, retryable=False)
+
+
+def complete_openai(message: str, history: list[dict[str, str]]) -> ProviderReply:
+    return _complete_openai_compatible(
+        "openai",
+        openai_api_key(),
+        openai_model_candidates() or [openai_model()],
+        message,
+        history,
+    )
+
+
+def complete_openrouter(message: str, history: list[dict[str, str]]) -> ProviderReply:
+    import os
+
+    return _complete_openai_compatible(
+        "openrouter",
+        openrouter_api_key(),
+        openrouter_model_candidates() or [openrouter_model()],
+        message,
+        history,
+        base_url="https://openrouter.ai/api/v1",
+        default_headers={
+            "HTTP-Referer": os.getenv(
+                "OPENROUTER_HTTP_REFERER", "https://ai-shadow-twin-by-encrypted.vercel.app"
+            ).strip(),
+            "X-Title": os.getenv("OPENROUTER_APP_TITLE", "AI Shadow-Twin").strip(),
+        },
     )
 
 
@@ -200,6 +237,23 @@ def openai_model_exists() -> bool:
         return False
     names = {getattr(item, "id", "") for item in getattr(listed, "data", []) or []}
     return model in names
+
+
+def openrouter_model_exists() -> bool:
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=openrouter_api_key(),
+        base_url="https://openrouter.ai/api/v1",
+        timeout=timeout_s(),
+        max_retries=0,
+    )
+    try:
+        listed = client.models.list()
+    except Exception:
+        return False
+    names = {getattr(item, "id", "") for item in getattr(listed, "data", []) or []}
+    return bool(set(openrouter_model_candidates()).intersection(names))
 
 
 def gemini_model_exists() -> bool:
