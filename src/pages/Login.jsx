@@ -171,7 +171,7 @@ export default function Login() {
                 <option value="student">Student</option>
                 <option value="faculty">Faculty member</option>
               </select>
-              {accountType === 'faculty' && <p className="mt-2 text-sm text-muted">Faculty access requires administrator approval after email verification.</p>}
+              {accountType === 'faculty' && <p className="mt-2 text-sm text-muted">Faculty access requires administrator approval. Ask your administrator to approve your email before registering.</p>}
             </div>
             <div>
               <label htmlFor="display-name" className="mb-2 block text-sm font-medium text-text">Full name</label>
