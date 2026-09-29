@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
-import { ArrowLeft, Download, FileText, Upload } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Download, FileText, Upload } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Bar,
   BarChart,
@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Card, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
+import { Card, Chip, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
 import { chartPalette } from '../data/chartPalette'
 import { dashboardMockItems } from '../data/dashboardMockData'
 import { courseItems, mockCourses, reportRows, settingsConfig } from '../data/mockData'
@@ -21,18 +21,49 @@ import { useThemeMode } from '../hooks/useThemeMode'
 
 const verdictLabels = ['Content defect', 'Ability gap', 'Clean']
 const severityRank = { High: 3, Medium: 2, Low: 1 }
+const reviewStorageKey = 'shadow-twin-review-decisions'
+
+function readReviewDecisions() {
+  try {
+    return JSON.parse(localStorage.getItem(reviewStorageKey) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function formatAnalysisDate(value) {
+  const [year, month, day] = value.split('-')
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return `${Number(day)} ${months[Number(month) - 1]} ${year}`
+}
 
 /** @param {{ topic: import('../components/sidebarNavConfig').SidebarNavSubtopic, courseId: string }} props */
 export default function SidebarSubtopicPage({ topic, courseId }) {
   const darkMode = useThemeMode()
   const palette = chartPalette[darkMode ? 'dark' : 'light']
+  const [searchParams] = useSearchParams()
   const [files, setFiles] = useState([])
   const [runsPerItem, setRunsPerItem] = useState(settingsConfig.runsPerItem)
   const [selectedPersonas, setSelectedPersonas] = useState(settingsConfig.personas)
   const [confidenceThreshold, setConfidenceThreshold] = useState(settingsConfig.confidenceThreshold)
+  const [reviewDecisions, setReviewDecisions] = useState(readReviewDecisions)
+  const [undoDecisions, setUndoDecisions] = useState({})
 
   const currentCourse = mockCourses.find((course) => course.id === courseId) || mockCourses[0]
   const currentItems = courseItems.filter((item) => item.courseId === courseId)
+  const attentionItemId = searchParams.get('itemId')
+
+  useEffect(() => {
+    if (topic.kind !== 'attention' || !attentionItemId) return undefined
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`attention-${attentionItemId}`)?.scrollIntoView({
+        behavior: reducedMotion ? 'auto' : 'smooth',
+        block: 'center',
+      })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [topic.kind, attentionItemId])
   const verdictCounts = useMemo(() => dashboardMockItems.reduce((counts, item) => {
     counts[item.verdict] += 1
     return counts
@@ -50,6 +81,8 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
     flagged: verdictCounts['Content defect'] + verdictCounts['Ability gap'],
     clean: verdictCounts.Clean,
     health: Math.round(((dashboardMockItems.length - verdictCounts['Content defect']) / dashboardMockItems.length) * 100),
+    confirmed: dashboardMockItems.filter((item) => (reviewDecisions[item.id] || item.reviewStatus) === 'Confirmed').length,
+    averageConfidence: Math.round(dashboardMockItems.reduce((total, item) => total + item.twinAgreement, 0) / dashboardMockItems.length),
   }
   const flaggedItems = [...dashboardMockItems]
     .filter((item) => item.verdict !== 'Clean')
@@ -65,6 +98,40 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
     setSelectedPersonas((current) => current.includes(persona)
       ? current.filter((selected) => selected !== persona)
       : [...current, persona])
+  }
+
+  const decideReview = (itemId, status) => {
+    const item = dashboardMockItems.find((entry) => entry.id === itemId)
+    if (!item) return
+    setUndoDecisions((current) => ({ ...current, [itemId]: reviewDecisions[itemId] || item.reviewStatus }))
+    setReviewDecisions((current) => {
+      const next = { ...current, [itemId]: status }
+      try {
+        localStorage.setItem(reviewStorageKey, JSON.stringify(next))
+      } catch {
+        // Keep this review decision active in memory when storage is unavailable.
+      }
+      return next
+    })
+  }
+
+  const undoReview = (itemId) => {
+    const previous = undoDecisions[itemId]
+    if (!previous) return
+    setReviewDecisions((current) => {
+      const next = { ...current, [itemId]: previous }
+      try {
+        localStorage.setItem(reviewStorageKey, JSON.stringify(next))
+      } catch {
+        // Keep the undo in memory if storage is unavailable.
+      }
+      return next
+    })
+    setUndoDecisions((current) => {
+      const next = { ...current }
+      delete next[itemId]
+      return next
+    })
   }
 
   const exportReport = () => {
@@ -83,21 +150,21 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
     if (topic.kind === 'overview') {
       const stats = [
         { label: 'Items analysed', value: summary.total },
-        { label: 'Flagged', value: summary.flagged },
-        { label: 'Clean', value: summary.clean },
-        { label: 'Course health', value: `${summary.health}%` },
+        { label: 'Flagged defects', value: summary.flagged },
+        { label: 'Faculty confirmed %', value: `${summary.flagged ? Math.round((summary.confirmed / summary.flagged) * 100) : 0}%` },
+        { label: 'Avg twin confidence', value: `${summary.averageConfidence}%` },
       ]
       return (
         <div className="space-y-5">
+          <div className="flex justify-end"><span className="rounded-xl border border-accent bg-accent px-3 py-2 text-sm font-medium text-accent-fg">Last analysis: {formatAnalysisDate(currentCourse.lastAnalysis)}</span></div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {stats.map((stat) => <Card key={stat.label} className="p-5"><p className="text-sm text-muted">{stat.label}</p><p className="mt-3 text-3xl font-bold text-heading">{stat.value}</p></Card>)}
           </div>
           <Card className="p-5">
-            <h3 className="text-lg font-semibold text-heading">Analysis health</h3>
-            <div role="progressbar" aria-label="Course health" aria-valuemin={0} aria-valuemax={100} aria-valuenow={summary.health} className="mt-4 h-3 overflow-hidden rounded-full bg-border/30">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${summary.health}%` }} />
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div><h3 className="text-lg font-semibold text-heading">Course health</h3><p className="mt-2 text-4xl font-bold tabular-nums text-heading">{summary.health}%</p><p className="mt-2 text-sm text-muted">Target: 90% before the exam paper is finalised</p></div>
+              <div className="w-full sm:w-64"><div role="progressbar" aria-label="Course health" aria-valuemin={0} aria-valuemax={100} aria-valuenow={summary.health} className="h-3 overflow-hidden rounded-full bg-border/30"><div className="h-full rounded-full bg-primary" style={{ width: `${summary.health}%` }} /></div><div className="mt-2 flex justify-between text-xs text-muted"><span>0%</span><span>100%</span></div></div>
             </div>
-            <p className="mt-3 text-sm text-muted">{summary.health}% of items have no content defect.</p>
           </Card>
         </div>
       )
@@ -112,7 +179,7 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
                 <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
                 <XAxis dataKey="name" tick={{ fill: palette.axis }} />
                 <YAxis allowDecimals={false} tick={{ fill: palette.axis }} label={{ value: 'Items', angle: -90, position: 'insideLeft', fill: palette.axis }} />
-                <Tooltip contentStyle={{ backgroundColor: palette.surface, color: palette.text, borderColor: palette.border }} />
+                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: palette.surface, color: palette.text, borderColor: palette.border }} />
                 <Bar dataKey="contentDefects" name="Content defects" stackId="flagged" fill={palette.contentDefect} />
                 <Bar dataKey="abilityGaps" name="Ability gaps" stackId="flagged" fill={palette.abilityGap} />
               </BarChart>
@@ -141,7 +208,10 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
     }
 
     if (topic.kind === 'attention') {
-      return <div className="space-y-3">{flaggedItems.map((item) => <Card key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div><Link to={`/content/${item.id}`} className="font-semibold text-heading hover:text-primary/80">{item.title}</Link><p className="mt-1 text-sm text-muted">Unit {item.unit} · Twin agreement {item.twinAgreement}%</p><p className="mt-2 text-sm">{item.reason}</p></div><div className="flex gap-2"><VerdictChip verdict={item.verdict} /><SeverityChip severity={item.severity} /></div></Card>)}</div>
+      return <div className="space-y-3">{flaggedItems.map((item) => {
+        const status = reviewDecisions[item.id] || item.reviewStatus
+        return <Card id={`attention-${item.id}`} key={item.id} className="scroll-mt-24 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><Link to={`/content/${item.id}`} className="font-semibold text-heading hover:text-primary/80">{item.title}</Link><p className="mt-1 text-sm text-muted">Unit {item.unit} · Twin agreement {item.twinAgreement}%</p><p className="mt-2 text-sm text-text">{item.reason}</p><div className="mt-3 flex flex-wrap items-center gap-2"><VerdictChip verdict={item.verdict} /><SeverityChip severity={item.severity} />{status !== 'Open' && <Chip kind="status">{status}</Chip>}{status !== 'Open' && undoDecisions[item.id] && <button type="button" onClick={() => undoReview(item.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-muted underline underline-offset-2 hover:text-text">Undo</button>}</div></div>{status === 'Open' && <div className="flex shrink-0 gap-2"><button type="button" onClick={() => decideReview(item.id, 'Confirmed')} className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-fg">Confirm</button><button type="button" onClick={() => decideReview(item.id, 'Dismissed')} className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text hover:bg-bg">Dismiss</button></div>}</Card>
+      })}</div>
     }
 
     if (topic.kind === 'courses') {
@@ -207,11 +277,10 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm uppercase tracking-[0.18em] text-muted">{topic.groupLabel}</p>
+          <nav aria-label="Breadcrumb" className="text-sm text-muted"><ol className="flex items-center gap-2"><li><Link to={topic.groupTo} className="hover:text-heading">{topic.groupLabel}</Link></li><li aria-hidden="true">/</li><li aria-current="page">{topic.label}</li></ol></nav>
           <h2 className="mt-1 text-3xl font-bold text-heading">{topic.label}</h2>
           <p className="mt-2 max-w-3xl text-sm text-muted">{topic.description}</p>
         </div>
-        <Link to={topic.groupTo} className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text"><ArrowLeft aria-hidden="true" className="h-4 w-4" />{topic.groupLabel}</Link>
       </div>
       {renderContent()}
     </div>

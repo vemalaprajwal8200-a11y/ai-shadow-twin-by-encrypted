@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { sidebarNavGroups } from './sidebarNavConfig'
+import { getSidebarNavGroups, studentBottomTabs } from './sidebarNavConfig'
+import { useAuth } from '../auth/AuthContext'
 
 /** @typedef {import('./sidebarNavConfig').SidebarNavGroup} SidebarNavGroup */
 
@@ -59,12 +60,12 @@ function NavGroup({ group, isOpen, onToggle }) {
       <div className="flex items-center gap-1">
         <NavLink
           to={group.to}
-          className={({ isActive }) => `sidebar-link min-w-0 flex-1 ${isActive || hasActiveChild ? 'active' : ''}`}
+          className={({ isActive }) => `sidebar-link min-w-0 flex-1 ${hasActiveChild ? 'parent-active' : isActive ? 'active' : ''}`}
         >
           <Icon className="h-4 w-4 shrink-0" />
           <span className="truncate">{group.label}</span>
         </NavLink>
-        <button
+        {group.children.length > 0 && <button
           type="button"
           aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${group.label} submenu`}
           aria-expanded={isOpen}
@@ -84,9 +85,9 @@ function NavGroup({ group, isOpen, onToggle }) {
           className="rounded-lg p-2 text-sidebar-fg/75 transition hover:bg-sidebar/80 hover:text-sidebar-fg"
         >
           <ChevronDown className={`h-4 w-4 transition-transform duration-300 ease-out motion-reduce:transition-none ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
+        </button>}
       </div>
-      <div
+      {group.children.length > 0 && <div
         id={panelId}
         className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
       >
@@ -107,7 +108,7 @@ function NavGroup({ group, isOpen, onToggle }) {
                   const isActive = location.pathname === destination.pathname
                     && location.search === destination.search
                     && location.hash === destination.hash
-                  return `block rounded-lg px-3 py-2 text-sm text-sidebar-fg/80 transition hover:bg-sidebar/80 hover:text-sidebar-fg ${isActive ? 'bg-accent text-accent-fg' : ''}`
+                  return `sidebar-sub-link block rounded-r-lg px-3 py-2 text-sm text-sidebar-fg/80 transition hover:bg-sidebar/80 hover:text-sidebar-fg ${isActive ? 'active' : ''}`
                 }}
               >
                 {child.label}
@@ -115,7 +116,7 @@ function NavGroup({ group, isOpen, onToggle }) {
             ))}
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }
@@ -123,12 +124,14 @@ function NavGroup({ group, isOpen, onToggle }) {
 /**
  * @param {{ groups?: SidebarNavGroup[] }} props
  */
-export default function SidebarNav({ groups = sidebarNavGroups }) {
+export default function SidebarNav({ groups }) {
+  const { user } = useAuth()
+  const navGroups = groups || getSidebarNavGroups(user?.role === 'student' ? 'student' : 'faculty')
   const [openGroup, setOpenGroup] = useState('')
 
   return (
     <nav aria-label="Main" className="space-y-2">
-      {groups.map((group) => (
+      {navGroups.map((group) => (
         <NavGroup
           key={group.to}
           group={group}
@@ -138,6 +141,25 @@ export default function SidebarNav({ groups = sidebarNavGroups }) {
           ))}
         />
       ))}
+    </nav>
+  )
+}
+
+export function StudentBottomNav() {
+  const location = useLocation()
+
+  return (
+    <nav aria-label="Main student navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-sidebar-fg/20 bg-sidebar px-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
+      {studentBottomTabs.map((tab) => {
+        const Icon = tab.icon
+        const active = location.pathname === tab.to
+        return (
+          <NavLink key={tab.to} to={tab.to} aria-current={active ? 'page' : undefined} className={`flex min-w-0 flex-col items-center gap-1 px-1 py-2 text-[10px] font-medium ${active ? 'text-accent' : 'text-sidebar-fg/75'}`}>
+            <Icon aria-hidden="true" className="h-4 w-4" />
+            <span className="max-w-full truncate">{tab.label}</span>
+          </NavLink>
+        )
+      })}
     </nav>
   )
 }

@@ -54,6 +54,10 @@ body,
   height: 100%;
 }
 
+html {
+  scroll-padding-top: 5rem;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -69,6 +73,49 @@ body {
   min-height: 100vh;
 }
 
+.reveal {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.student-drawer {
+  animation: student-drawer-in 180ms ease-out both;
+}
+
+@keyframes student-drawer-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal,
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .student-drawer {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 .card {
   @apply rounded-2xl border border-border bg-surface shadow-soft;
 }
@@ -79,6 +126,20 @@ body {
 
 .sidebar-link.active {
   @apply bg-accent text-accent-fg;
+}
+
+.sidebar-link.parent-active {
+  @apply bg-transparent text-sidebar-fg;
+}
+
+.sidebar-sub-link {
+  border-left: 2px solid transparent;
+}
+
+.sidebar-sub-link.active {
+  border-left-color: rgb(var(--accent));
+  background-color: rgb(var(--accent) / 0.12);
+  color: rgb(var(--sidebar-fg));
 }
 
 .badge {

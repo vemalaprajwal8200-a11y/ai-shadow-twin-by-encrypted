@@ -23,9 +23,9 @@ export function getChipClass(kind, value) {
   return chipClasses[kind][value] || 'bg-surface text-muted'
 }
 
-/** @param {{ children: import('react').ReactNode, className?: string }} props */
-export function Card({ children, className = '' }) {
-  return <div className={`card ${className}`}>{children}</div>
+/** @param {import('react').HTMLAttributes<HTMLDivElement>} props */
+export function Card({ children, className = '', ...attributes }) {
+  return <div {...attributes} className={`card ${className}`}>{children}</div>
 }
 
 /** @param {{ id: string, eyebrow: string, title: string, aside?: import('react').ReactNode, children: import('react').ReactNode }} props */

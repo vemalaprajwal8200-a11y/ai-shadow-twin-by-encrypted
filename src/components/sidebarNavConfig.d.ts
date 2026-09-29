@@ -10,6 +10,7 @@ export interface SidebarNavChild {
 }
 
 export type SidebarSubtopicKind =
+  | 'student-details'
   | 'overview'
   | 'flagged-units'
   | 'verdicts'
@@ -25,6 +26,9 @@ export type SidebarSubtopicKind =
   | 'runs'
   | 'personas'
   | 'confidence'
+  | 'my-units'
+  | 'missed'
+  | 'plan'
 
 export interface SidebarNavGroup {
   label: string
@@ -34,6 +38,8 @@ export interface SidebarNavGroup {
 }
 
 export const sidebarNavGroups: SidebarNavGroup[]
+export const studentSidebarNavGroups: SidebarNavGroup[]
+export function getSidebarNavGroups(role: 'student' | 'faculty'): SidebarNavGroup[]
 
 export interface SidebarNavSubtopic extends SidebarNavChild {
   groupLabel: string
@@ -41,3 +47,4 @@ export interface SidebarNavSubtopic extends SidebarNavChild {
 }
 
 export const sidebarNavSubtopics: SidebarNavSubtopic[]
+export const studentBottomTabs: Array<{ label: string, to: string, icon: LucideIcon }>
