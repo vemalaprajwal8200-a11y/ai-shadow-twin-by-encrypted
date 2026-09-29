@@ -25,7 +25,7 @@ logger = logging.getLogger("app.chat")
 MAX_MESSAGE_LEN = 4000
 MAX_HISTORY = 20
 ALLOWED_ROLES = {"user", "assistant"}
-ALLOWED_PROVIDERS = {"openai", "gemini"}
+ALLOWED_PROVIDERS = {"openai"}
 
 
 class ChatTurn(BaseModel):
@@ -135,17 +135,11 @@ def handle_chat_health(deep: bool = False) -> dict[str, Any]:
         "openai": {
             "configured": openai_configured(),
             "model": openai_model(),
-        },
-        "gemini": {
-            "configured": gemini_configured(),
-            "model": gemini_model(),
-        },
+        }
     }
     if not deep:
         return payload
 
     if openai_configured():
         payload["openai"]["status"] = "ok" if openai_model_exists() else "not-found"
-    if gemini_configured():
-        payload["gemini"]["status"] = "ok" if gemini_model_exists() else "not-found"
     return payload

@@ -12,7 +12,7 @@ load_dotenv(_BACKEND_DIR / "test.env", override=False)
 
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
-DEFAULT_PROVIDER_ORDER = "openai,gemini"
+DEFAULT_PROVIDER_ORDER = "openai"
 DEFAULT_SYSTEM_PROMPT = (
     "You are a professional assistant for the AI Shadow-Twin app. "
     "Help faculty understand flagged course content clearly and concisely."
@@ -43,8 +43,11 @@ def gemini_model() -> str:
 def provider_order() -> list[str]:
     raw = _trimmed("CHAT_PROVIDER_ORDER") or DEFAULT_PROVIDER_ORDER
     names = [part.strip().lower() for part in raw.split(",") if part.strip()]
-    allowed = {"openai", "gemini"}
-    return [name for name in names if name in allowed]
+    if not names:
+        return []
+    if openai_api_key():
+        return ["openai"]
+    return []
 
 
 def system_prompt() -> str:

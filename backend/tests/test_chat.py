@@ -56,54 +56,7 @@ def test_openai_success(monkeypatch, caplog):
     _assert_no_secrets(caplog.text)
 
 
-def test_openai_404_then_gemini_fallback(monkeypatch, caplog):
-    caplog.set_level(logging.INFO, logger="app.chat")
-    _enable_both(monkeypatch)
-    counts = {"openai": 0, "gemini": 0}
-
-    def openai_404(_message, _history):
-        counts["openai"] += 1
-        raise ChatProviderError("missing model", status_code=404, retryable=False)
-
-    def gemini_ok(_message, _history):
-        counts["gemini"] += 1
-        return ProviderReply(text="from-gemini", provider="gemini", model="gemini-test")
-
-    monkeypatch.setitem(chat_service.PROVIDERS, "openai", openai_404)
-    monkeypatch.setitem(chat_service.PROVIDERS, "gemini", gemini_ok)
-
-    response = _client().post("/chat", json={"message": "fallback please"})
-    assert response.status_code == 200
-    assert response.json()["provider"] == "gemini"
-    assert response.json()["reply"] == "from-gemini"
-    assert counts == {"openai": 1, "gemini": 1}
-    _assert_no_secrets(response.text)
-    _assert_no_secrets(caplog.text)
-
-
-def test_openai_500_then_gemini_fallback(monkeypatch):
-    _enable_both(monkeypatch)
-    counts = {"openai": 0, "gemini": 0}
-
-    def openai_500(_message, _history):
-        counts["openai"] += 1
-        raise ChatProviderError("server", status_code=500, retryable=True)
-
-    def gemini_ok(_message, _history):
-        counts["gemini"] += 1
-        return ProviderReply(text="gemini-after-500", provider="gemini", model="gemini-test")
-
-    monkeypatch.setitem(chat_service.PROVIDERS, "openai", openai_500)
-    monkeypatch.setitem(chat_service.PROVIDERS, "gemini", gemini_ok)
-
-    response = _client().post("/chat", json={"message": "after 500"})
-    assert response.status_code == 200
-    assert response.json()["reply"] == "gemini-after-500"
-    assert counts["openai"] == 2
-    assert counts["gemini"] == 1
-
-
-def test_both_fail_returns_502(monkeypatch, caplog):
+def test_openai_fails_returns_502(monkeypatch, caplog):
     caplog.set_level(logging.INFO, logger="app.chat")
     _enable_both(monkeypatch)
 
@@ -111,7 +64,6 @@ def test_both_fail_returns_502(monkeypatch, caplog):
         raise ChatProviderError("down", status_code=500, retryable=True)
 
     monkeypatch.setitem(chat_service.PROVIDERS, "openai", boom)
-    monkeypatch.setitem(chat_service.PROVIDERS, "gemini", boom)
 
     response = _client().post("/chat", json={"message": "please fail"})
     assert response.status_code == 502
@@ -153,7 +105,7 @@ def test_invalid_input_returns_422(monkeypatch, caplog):
             "history": [{"role": "user", "content": "t"} for _ in range(21)],
         },
     )
-    bad_provider = client.post("/chat", json={"message": "hi", "provider": "claude"})
+    bad_provider = client.post("/chat", json={"message": "hi", "provider": "gemini"})
 
     for response in (empty, too_long, bad_role, too_much_history, bad_provider):
         assert response.status_code == 422

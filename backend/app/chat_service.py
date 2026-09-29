@@ -24,7 +24,6 @@ _SECRET_RE = re.compile(
 
 PROVIDERS = {
     "openai": complete_openai,
-    "gemini": complete_gemini,
 }
 
 
@@ -50,8 +49,6 @@ def redact(value: object) -> str:
 def _has_key(name: str) -> bool:
     if name == "openai":
         return openai_configured()
-    if name == "gemini":
-        return gemini_configured()
     return False
 
 
