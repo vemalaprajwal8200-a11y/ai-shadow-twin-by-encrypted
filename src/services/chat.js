@@ -198,6 +198,7 @@ export async function sendChatMessageStream({
   courseId,
   unitId,
   persona,
+  role = 'student',
   signal,
   onToken,
   onComplete,
@@ -207,7 +208,7 @@ export async function sendChatMessageStream({
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, courseId, unitId, persona }),
+      body: JSON.stringify({ messages, courseId, unitId, persona, role }),
       signal,
     })
 

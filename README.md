@@ -18,35 +18,6 @@ Copy `.env.example` to `.env.local` in the project root:
 cp .env.example .env.local
 ```
 
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` from Supabase Project Settings → API. These are public browser credentials; never put a service-role key in a `VITE_` variable. Configure `GEMINI_API_KEY` for the chat endpoint in your local environment and in Vercel's environment settings.
-
-## Email registration and sign-in
-
-Run `backend/docs/supabase_auth_schema.sql` in the Supabase SQL Editor to create the profile table, row-level security policy, new-user trigger, and profiles for existing Auth users. In Supabase Authentication settings, enable the Email provider and email confirmation; keep the **Confirm signup** template link-based with `{{ .ConfirmationURL }}`. Add `https://ai-shadow-twin-by-encrypted.vercel.app/login*` to Authentication → URL Configuration → Redirect URLs; the wildcard covers both signup confirmation and the `?recovery=complete` password-reset callback. Configure custom SMTP under Authentication settings for reliable delivery; Supabase's default mail service is rate-limited and may only deliver to project-authorized addresses.
-
-Registration asks for an account type, email, and password. Supabase Auth stores password hashes; this app never saves raw passwords to the profiles table. Email confirmation returns to the deployed login page, after which sign-in uses email and password. Users from the old passwordless flow can use **Forgot password?** to set one. Students provide a USN/student ID.
-
-Faculty access is never granted just because someone selects Faculty. Before an approved faculty member registers, run this as an administrator in the Supabase SQL Editor:
-
-```sql
-insert into public.faculty_invites (email)
-values (lower('faculty@example.com'))
-on conflict (email) do nothing;
-```
-
-The invite is private and consumed by the signup trigger. Replace the example email with the approved address. For an account that already exists, use the profile-promotion SQL comment at the end of `backend/docs/supabase_auth_schema.sql`.
-
-The backend reads `GEMINI_API_KEY` and `GEMINI_MODEL`, with optional `GEMINI_BASE_URL`, plus `API_KEY`, `RUNS_PER_PERSONA`, and `MAX_CONCURRENCY`. Never put service-role keys or other backend secrets in frontend code.
-
-Enable the repository's staged-secret check once per clone:
-
-```powershell
-git config core.hooksPath .githooks
-python scripts/check_secrets.py --worktree
-```
-
-Every `VITE_` variable is public: Vite embeds it into browser-delivered code. Do not prefix API keys, Supabase service-role keys, or other secrets with `VITE_`.
-
 Add your LLM API Key:
 ```env
 # Gemini API Key (Recommended)
@@ -62,13 +33,51 @@ GEMINI_API_KEY=your-gemini-api-key
 ```bash
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser. The app will land directly on **/chat** after sign in.
+Open [http://localhost:5173](http://localhost:5173) in your browser. The app lands directly on **/chat** after sign in.
+
+---
+
+## 🛠️ How to Tune the Twin
+
+You can customize and tune the Shadow-Twin's AI persona, verdict classifications, and accuracy without modifying any frontend code.
+
+### 1. Edit Prompt Files
+All Twin prompts live in `api/_prompts/`:
+- **`api/_prompts/base.js`**: Core system prompt defining the Twin's role, rules, and tag output specifications.
+- **`api/_prompts/personas.js`**: Persona definitions for `Beginner` (literal, flags jargon), `Average` (standard student), and `Careful` (meticulous, tests edge cases & balance invariants).
+- **`api/_prompts/examples.js`**: Few-shot evaluation examples in the format `{ itemText, twinReasoning, verdict, reason }`.
+
+### 2. Add Few-Shot Examples
+In `api/_prompts/examples.js`, add real course slides or exam questions along with their reasoning and ground-truth verdict:
+```js
+{
+  itemText: "Lesson X: ...",
+  twinReasoning: "Why a student or persona got confused...",
+  verdict: "defect", // allowed values: defect | ambiguous | gap | clean
+  reason: "One line explanation of the issue"
+}
+```
+
+### 3. Run the Evaluation Benchmark
+Run the evaluation harness to benchmark predicted verdicts against `eval/dataset.json`:
+```bash
+npm run eval
+```
+The script evaluates items, calculates overall accuracy and per-verdict accuracy stats, and outputs a detailed list of mismatches.
+
+### 4. Deploy to Vercel
+After tuning prompts and verifying accuracy, push your changes to redeploy on Vercel:
+```bash
+git add .
+git commit -m "Tune Twin prompts and evaluation benchmark"
+git push
+```
 
 ---
 
 ## 📦 Deployment to Vercel
 
-The `/api/chat` endpoint is built as a Vercel Serverless Function (`api/chat.js`), handling request processing and streaming without requiring a separate server.
+The `/api/chat` endpoint is built as a Vercel Serverless Function (`api/chat.js`), handling request processing, lightweight retrieval, and streaming without requiring a separate backend server.
 
 ### Steps to Deploy:
 1. Push the project repository to GitHub / GitLab / Bitbucket.
@@ -80,9 +89,10 @@ The `/api/chat` endpoint is built as a Vercel Serverless Function (`api/chat.js`
 
 ---
 
-## 🎨 Key Features & Architecture
+## 🎨 Architecture & Components
 
 - **Main Navigation (`/chat`)**: "Ask the Twin" is the primary sidebar menu item with an AI badge and default landing page after login.
+- **Lightweight Retrieval (`api/_lib/retrieve.js`)**: TF-IDF keyword overlap chunking scoring top 5 relevant slides/questions for the selected unit (and earlier units only).
 - **Slide-Over Panel**: Floating round chat button on all other pages opens a 400px slide-over panel sharing the same chat thread and history.
 - **Two-Column Chat Layout**:
   - **70% Chat Card**: Header with status dot, persona dropdown (Beginner / Average / Careful), message thread with markdown rendering, inline verdict item cards, message action buttons (Copy, Regenerate, Thumbs up/down), auto-growing composer with file attachments, and character limit.

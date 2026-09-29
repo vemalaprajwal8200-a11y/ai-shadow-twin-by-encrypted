@@ -1,0 +1,182 @@
+[
+  {
+    "id": "slide-1",
+    "text": "Arrays store values contiguously, and each element is accessed by pointer arithmetic.",
+    "expectedVerdict": "defect",
+    "expectedReason": "Term 'pointer arithmetic' is used before definition and incorrectly implies it is required for array access."
+  },
+  {
+    "id": "q-2",
+    "text": "A stack is a data structure where elements are added to the front. Is this statement true or false?",
+    "expectedVerdict": "defect",
+    "expectedReason": "States elements are added to the front, confusing stack LIFO semantics with queue behavior."
+  },
+  {
+    "id": "slide-3",
+    "text": "Queue operations are FIFO; items are removed from the front, and new items enter from the rear. A queue is effectively a stack in reverse.",
+    "expectedVerdict": "defect",
+    "expectedReason": "Claims a queue is a stack in reverse, which is factually incorrect and confusing."
+  },
+  {
+    "id": "slide-4",
+    "text": "Each node stores data and a pointer to the previous node. The list is singly linked because each node references a single child.",
+    "expectedVerdict": "defect",
+    "expectedReason": "Describes a doubly linked list structure while labeling it as singly linked."
+  },
+  {
+    "id": "slide-5",
+    "text": "Every recursive call creates a new copy of the function. The state is preserved in a stack frame that is invisible to the programmer.",
+    "expectedVerdict": "gap",
+    "expectedReason": "Scope and activation stack frame lifespan are underspecified for beginners."
+  },
+  {
+    "id": "q-6",
+    "text": "In a balanced binary search tree, what is the worst-case cost for search?",
+    "expectedVerdict": "gap",
+    "expectedReason": "Assumes prior understanding of tree balance invariants for the O(log n) bound."
+  },
+  {
+    "id": "slide-7",
+    "text": "Pre-order traversal is root, left subtree, right subtree; in-order is left, root, right; post-order is left, right, root. The last step is to traverse the whole tree in reverse.",
+    "expectedVerdict": "defect",
+    "expectedReason": "Final sentence introduces an undefined 'reverse' traversal step."
+  },
+  {
+    "id": "q-8",
+    "text": "A hash map resolves collisions by storing the same key in multiple buckets. Explain the idea.",
+    "expectedVerdict": "defect",
+    "expectedReason": "Incorrectly states that the same key is duplicated across multiple buckets."
+  },
+  {
+    "id": "slide-9",
+    "text": "The height of a tree is the number of edges from the root to the deepest leaf. This means a single-node tree has height 0.",
+    "expectedVerdict": "clean",
+    "expectedReason": "Accurate and clear definition of tree height based on edge count."
+  },
+  {
+    "id": "q-10",
+    "text": "Which data structure is best when you need fast insertion and lookup with sorted data preserving order?",
+    "expectedVerdict": "clean",
+    "expectedReason": "Clear assessment item evaluating BST vs heap trade-offs."
+  },
+  {
+    "id": "slide-11",
+    "text": "A graph has vertices and edges. A directed graph has edges that can be traversed in both directions.",
+    "expectedVerdict": "defect",
+    "expectedReason": "Defines directed graphs as bidirectional instead of one-directional."
+  },
+  {
+    "id": "q-12",
+    "text": "In an adjacency list, each vertex stores all edges to its neighbors. What is the best way to represent these neighbors?",
+    "expectedVerdict": "gap",
+    "expectedReason": "Underspecified representation format without clarifying weighted graph assumptions."
+  },
+  {
+    "id": "slide-13",
+    "text": "A min-heap always keeps the largest value at the root. A priority queue can be implemented with a heap.",
+    "expectedVerdict": "defect",
+    "expectedReason": "Inverts the min-heap invariant by stating the largest value is at the root."
+  },
+  {
+    "id": "slide-14",
+    "text": "An abstract data type describes implementation details, such as how arrays store elements in a list.",
+    "expectedVerdict": "defect",
+    "expectedReason": "Reverses the definition of ADT by claiming it describes implementation rather than interface."
+  },
+  {
+    "id": "q-15",
+    "text": "Order these complexities from fastest to slowest: O(log n), O(n), O(n log n), O(1).",
+    "expectedVerdict": "clean",
+    "expectedReason": "Standard complexity ordering question."
+  },
+  {
+    "id": "slide-16",
+    "text": "Binary search checks the middle value, then repeats on the full range until it finds the target. It works only on sorted lists.",
+    "expectedVerdict": "clean",
+    "expectedReason": "Standard binary search description."
+  },
+  {
+    "id": "slide-17",
+    "text": "A balanced tree keeps the height difference between subtrees within one level. This gives worst-case search time of O(n).",
+    "expectedVerdict": "defect",
+    "expectedReason": "Incorrectly states search time for a balanced tree is O(n) instead of O(log n)."
+  },
+  {
+    "id": "q-18",
+    "text": "A max-priority queue returns the smallest element first. True or false?",
+    "expectedVerdict": "defect",
+    "expectedReason": "Reverses the max-priority queue definition."
+  },
+  {
+    "id": "slide-19",
+    "text": "Depth-first search explores one path as far as possible before backtracking. This is usually implemented recursively or with a stack.",
+    "expectedVerdict": "clean",
+    "expectedReason": "Accurate definition of DFS traversal."
+  },
+  {
+    "id": "slide-20",
+    "text": "Breadth-first search explores neighbors level by level using a queue. It is suitable for shortest-path problems in unweighted graphs.",
+    "expectedVerdict": "clean",
+    "expectedReason": "Accurate definition of BFS properties."
+  },
+  {
+    "id": "slide-21",
+    "text": "A linked list allows O(1) random access to any element by index.",
+    "expectedVerdict": "defect",
+    "expectedReason": "Linked lists require O(n) sequential traversal for indexing."
+  },
+  {
+    "id": "q-22",
+    "text": "What is the worst-case time complexity of inserting into an unsorted array?",
+    "expectedVerdict": "ambiguous",
+    "expectedReason": "Does not specify whether appending at end O(1) or shifting elements at arbitrary index O(n) is intended."
+  },
+  {
+    "id": "slide-23",
+    "text": "An AVL tree is a self-balancing binary search tree where the heights of any node's subtrees differ by at most one.",
+    "expectedVerdict": "clean",
+    "expectedReason": "Standard and precise definition of an AVL tree."
+  },
+  {
+    "id": "q-24",
+    "text": "In a hash table using linear probing, what happens when a collision occurs?",
+    "expectedVerdict": "clean",
+    "expectedReason": "Clear question probing open addressing collision resolution."
+  },
+  {
+    "id": "slide-25",
+    "text": "QuickSort always guarantees O(n log n) execution time regardless of pivot selection.",
+    "expectedVerdict": "defect",
+    "expectedReason": "QuickSort degraded worst-case is O(n^2) when bad pivots are chosen."
+  },
+  {
+    "id": "q-26",
+    "text": "Explain Dijkstra's algorithm for negative edge weights.",
+    "expectedVerdict": "gap",
+    "expectedReason": "Dijkstra's algorithm assumes non-negative edge weights; negative edges require Bellman-Ford."
+  },
+  {
+    "id": "slide-27",
+    "text": "In-order traversal of a BST visits nodes in ascending sorted order.",
+    "expectedVerdict": "clean",
+    "expectedReason": "Standard property of binary search tree traversals."
+  },
+  {
+    "id": "q-28",
+    "text": "Is a binary heap a complete binary tree?",
+    "expectedVerdict": "clean",
+    "expectedReason": "Accurate structural invariant requirement for binary heaps."
+  },
+  {
+    "id": "slide-29",
+    "text": "A B-Tree stores all key-value pairs exclusively in leaf nodes.",
+    "expectedVerdict": "ambiguous",
+    "expectedReason": "Confuses B-Tree (keys in internal nodes) with B+ Tree (keys replicated in leaves)."
+  },
+  {
+    "id": "slide-30",
+    "text": "Recursion can always be converted to iteration using an explicit stack.",
+    "expectedVerdict": "clean",
+    "expectedReason": "Factually correct theoretical computer science equivalence principle."
+  }
+]

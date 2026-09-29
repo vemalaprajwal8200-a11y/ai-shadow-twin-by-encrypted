@@ -191,6 +191,7 @@ export default function ChatInterface({
       courseId,
       unitId,
       persona,
+      role: user?.role || 'student',
       signal: abortController.signal,
       onToken: (token) => {
         setStreamingContent((prev) => prev + token)
