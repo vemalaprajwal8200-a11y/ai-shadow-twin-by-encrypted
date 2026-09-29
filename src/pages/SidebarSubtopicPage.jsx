@@ -179,7 +179,7 @@ export default function SidebarSubtopicPage({ topic, courseId }) {
                 <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
                 <XAxis dataKey="name" tick={{ fill: palette.axis }} />
                 <YAxis allowDecimals={false} tick={{ fill: palette.axis }} label={{ value: 'Items', angle: -90, position: 'insideLeft', fill: palette.axis }} />
-                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: palette.surface, color: palette.text, borderColor: palette.border }} />
+                <Tooltip cursor={{ fill: 'rgba(207,255,220,0.05)' }} contentStyle={{ backgroundColor: palette.surface, color: palette.text, borderColor: palette.border }} />
                 <Bar dataKey="contentDefects" name="Content defects" stackId="flagged" fill={palette.contentDefect} />
                 <Bar dataKey="abilityGaps" name="Ability gaps" stackId="flagged" fill={palette.abilityGap} />
               </BarChart>

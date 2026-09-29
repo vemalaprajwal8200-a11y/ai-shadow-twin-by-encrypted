@@ -3,22 +3,30 @@
 @tailwind utilities;
 
 :root {
-  --bg: 240 237 228;
-  --surface: 250 248 243;
-  --text: 23 23 23;
-  --heading: 0 71 65;
-  --muted: 87 86 80;
-  --border: 119 117 108;
-  --primary: 0 71 65;
-  --primary-fg: 240 237 228;
-  --accent: 33 241 168;
-  --accent-fg: 23 23 23;
-  --sidebar: 0 71 65;
-  --sidebar-fg: 240 237 228;
-  --focus-guard: 0 71 65;
+  --bg: 243 255 246;
+  --surface: 255 255 255;
+  --text: 37 61 44;
+  --heading: 37 61 44;
+  --muted: 37 61 44;
+  --muted-opacity: 0.72;
+  --border: 37 61 44;
+  --border-opacity: 0.14;
+  --track: 37 61 44;
+  --track-opacity: 0.14;
+  --primary: 46 111 64;
+  --primary-fg: 255 255 255;
+  --primary-hover: 37 61 44;
+  --primary-hover-fg: 255 255 255;
+  --selection: 104 186 127;
+  --accent: 46 111 64;
+  --accent-fg: 255 255 255;
+  --sidebar: 46 111 64;
+  --sidebar-fg: 207 255 220;
+  --focus: 46 111 64;
+  --focus-guard: 243 255 246;
   --danger: 158 40 31;
   --warn: 120 66 0;
-  --shadow: 23 23 23;
+  --shadow: 37 61 44;
   color: rgb(var(--text));
   background-color: rgb(var(--bg));
   color-scheme: light;
@@ -28,19 +36,26 @@
 }
 
 .dark {
-  --bg: 23 23 23;
-  --surface: 30 38 36;
-  --text: 240 237 228;
-  --heading: 240 237 228;
-  --muted: 193 203 198;
-  --border: 119 129 125;
-  --primary: 33 241 168;
-  --primary-fg: 23 23 23;
-  --accent: 33 241 168;
-  --accent-fg: 23 23 23;
-  --sidebar: 0 71 65;
-  --sidebar-fg: 240 237 228;
-  --focus-guard: 30 38 36;
+  --bg: 28 45 33;
+  --surface: 37 61 44;
+  --text: 207 255 220;
+  --heading: 207 255 220;
+  --muted: 207 255 220;
+  --muted-opacity: 0.72;
+  --border: 207 255 220;
+  --border-opacity: 0.12;
+  --track: 207 255 220;
+  --track-opacity: 0.12;
+  --primary: 104 186 127;
+  --primary-fg: 37 61 44;
+  --primary-hover: 207 255 220;
+  --primary-hover-fg: 37 61 44;
+  --accent: 104 186 127;
+  --accent-fg: 37 61 44;
+  --sidebar: 46 111 64;
+  --sidebar-fg: 207 255 220;
+  --focus: 207 255 220;
+  --focus-guard: 28 45 33;
   --danger: 255 137 125;
   --warn: 250 204 120;
   --shadow: 0 0 0;
@@ -138,7 +153,7 @@ body {
 
 .sidebar-sub-link.active {
   border-left-color: rgb(var(--accent));
-  background-color: rgb(var(--accent) / 0.12);
+  background-color: rgb(var(--accent) / 0.16);
   color: rgb(var(--sidebar-fg));
 }
 
@@ -148,7 +163,7 @@ body {
 
 ::selection {
   color: rgb(var(--accent-fg));
-  background-color: rgb(var(--accent));
+  background-color: rgb(var(--selection) / 0.35);
 }
 
 input,
@@ -166,7 +181,7 @@ textarea {
 }
 
 :where(a, button, input, select, textarea, summary, [role='button'], [role='link'], [tabindex]:not([tabindex='-1'])):focus-visible {
-  outline: 2px solid rgb(var(--accent));
+  outline: 2px solid rgb(var(--focus));
   outline-offset: 2px;
   box-shadow:
     0 0 0 2px rgb(var(--focus-guard)),
@@ -179,14 +194,27 @@ textarea {
 }
 
 ::-webkit-scrollbar-track {
-  background-color: rgb(var(--surface));
+  background-color: rgb(var(--track) / var(--track-opacity));
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgb(var(--border));
+  background-color: rgb(var(--track) / var(--track-opacity));
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(var(--muted));
+  background-color: rgb(var(--muted) / var(--muted-opacity));
+}
+
+.bg-border\/30 {
+  background-color: rgb(var(--track) / var(--track-opacity));
+}
+
+.hover\:bg-primary\/90:hover {
+  background-color: rgb(var(--primary-hover));
+  color: rgb(var(--primary-hover-fg));
+}
+
+.hover\:text-primary\/80:hover {
+  color: rgb(var(--primary-hover));
 }

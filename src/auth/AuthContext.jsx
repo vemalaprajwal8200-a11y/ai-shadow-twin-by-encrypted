@@ -87,26 +87,27 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(user),
     configured: isSupabaseConfigured(),
-    async requestEmailCode(email, { register = false, displayName = '' } = {}) {
+    async registerWithEmail(email, password, displayName = '') {
       const client = getSupabaseClient()
-      const options = register
-        ? { shouldCreateUser: true, data: { display_name: displayName.trim() } }
-        : { shouldCreateUser: false }
-      const { error } = await client.auth.signInWithOtp({
+      const { data, error } = await client.auth.signUp({
         email: email.trim(),
-        options,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login?confirmed=1`,
+          data: { display_name: displayName.trim() },
+        },
       })
       if (error) throw error
+      if (!data.user) throw new Error('Account registration did not return a user.')
     },
-    async verifyEmailCode(email, token) {
+    async loginWithEmail(email, password) {
       const client = getSupabaseClient()
-      const { data, error } = await client.auth.verifyOtp({
+      const { data, error } = await client.auth.signInWithPassword({
         email: email.trim(),
-        token: token.trim(),
-        type: 'email',
+        password,
       })
       if (error) throw error
-      if (!data.user) throw new Error('Email verification did not return an account.')
+      if (!data.user) throw new Error('Sign in did not return an account.')
 
       const profileUser = await getProfileUser(client, data.user)
       setUser(profileUser)

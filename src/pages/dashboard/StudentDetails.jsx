@@ -330,7 +330,7 @@ export default function StudentDetails({ courseId }) {
           <Card className="hidden overflow-hidden md:block">
             <div className="max-h-[calc(100vh-25rem)] overflow-auto">
               <table className="w-full min-w-[1050px] text-left text-sm" aria-label="Student performance roster">
-                <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wide text-muted shadow-[0_1px_0_rgb(var(--border)_/_0.5)]">
+                <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wide text-muted shadow-[0_1px_0_rgb(var(--border)_/_var(--border-opacity))]">
                   <tr>
                     <th scope="col" className="px-4 py-3">Student</th>
                     <th scope="col" className="px-3 py-3">Overall</th>

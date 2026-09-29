@@ -12,7 +12,7 @@ export default function TopBar({ course, courses, onCourseChange }) {
   }
 
   return (
-    <header className="flex items-center justify-between gap-2 border-b border-border bg-surface px-3 py-3 backdrop-blur sm:px-5 sm:py-4">
+    <header className="flex items-center justify-between gap-2 border-b border-border bg-bg px-3 py-3 backdrop-blur sm:px-5 sm:py-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         {user?.role === 'student' ? (
           <span className="max-w-[43vw] truncate rounded-xl border border-border bg-bg px-2.5 py-2 text-xs font-medium text-muted sm:max-w-none sm:px-3 sm:text-sm">{selectedCourse?.title}</span>
