@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 
 export function useDarkMode() {
-  const [darkMode, setDarkMode] = useState(false)
-
-  useEffect(() => {
+  const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('shadow-twin-theme')
-    if (saved === 'dark') {
-      setDarkMode(true)
-    }
-  }, [])
+    if (saved === 'dark') return true
+    if (saved === 'light') return false
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)

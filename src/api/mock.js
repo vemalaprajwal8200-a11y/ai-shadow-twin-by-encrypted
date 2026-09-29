@@ -35,9 +35,9 @@ export const mockApi = {
         { name: 'Unit 3', flagged: 2 },
       ],
       verdictBreakdown: [
-        { name: 'Content defect', value: 6, color: '#ef4444' },
-        { name: 'Ability gap', value: 3, color: '#3b82f6' },
-        { name: 'Clean', value: 21, color: '#10b981' },
+        { name: 'Content defect', value: 6 },
+        { name: 'Ability gap', value: 3 },
+        { name: 'Clean', value: 21 },
       ],
       needsAttention: courseItems
         .filter((item) => item.verdict !== 'Clean')

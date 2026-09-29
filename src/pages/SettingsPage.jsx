@@ -25,25 +25,25 @@ export default function SettingsPage() {
   }, [])
 
   if (loading || !settings) {
-    return <div className="h-60 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+    return <div className="h-60 animate-pulse rounded-2xl bg-border/30" />
   }
 
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <p className="text-sm uppercase tracking-[0.22em] text-slate-400">System</p>
-        <h2 className="mt-1 text-3xl font-bold dark:text-white">Settings</h2>
+        <p className="text-sm uppercase tracking-[0.22em] text-muted">System</p>
+        <h2 className="mt-1 text-3xl font-bold text-heading">Settings</h2>
       </div>
 
       <div className="card p-5">
-        <div className="mb-4 flex items-center gap-2 text-lg font-semibold dark:text-white">
-          <SlidersHorizontal className="h-5 w-5 text-slate-500" />
+        <div className="mb-4 flex items-center gap-2 text-lg font-semibold text-heading">
+          <SlidersHorizontal className="h-5 w-5 text-muted" />
           Twin configuration
         </div>
 
         <div className="space-y-6">
           <div>
-            <label className="mb-2 flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
+            <label className="mb-2 flex items-center justify-between text-sm font-medium text-text">
               <span>Runs per item</span>
               <span className="font-semibold">{settings.runsPerItem}</span>
             </label>
@@ -53,12 +53,12 @@ export default function SettingsPage() {
               max="10"
               value={settings.runsPerItem}
               onChange={(event) => setSettings({ ...settings, runsPerItem: Number(event.target.value) })}
-              className="w-full accent-blue-600"
+              className="w-full accent-primary"
             />
           </div>
 
           <div>
-            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-text">
               <Users className="h-4 w-4" /> Persona selection
             </label>
             <div className="flex flex-wrap gap-2">
@@ -66,7 +66,7 @@ export default function SettingsPage() {
                 <button
                   key={persona}
                   type="button"
-                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium text-text transition hover:border-primary hover:text-primary"
                 >
                   {persona}
                 </button>
@@ -75,7 +75,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="mb-2 flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
+            <label className="mb-2 flex items-center justify-between text-sm font-medium text-text">
               <span className="inline-flex items-center gap-2">
                 <Gauge className="h-4 w-4" /> Confidence threshold
               </span>
@@ -87,7 +87,7 @@ export default function SettingsPage() {
               max="95"
               value={settings.confidenceThreshold}
               onChange={(event) => setSettings({ ...settings, confidenceThreshold: Number(event.target.value) })}
-              className="w-full accent-blue-600"
+              className="w-full accent-primary"
             />
           </div>
         </div>
