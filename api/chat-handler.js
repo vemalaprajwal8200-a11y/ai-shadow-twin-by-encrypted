@@ -94,7 +94,10 @@ export default async function chatHandler(req, res) {
     retrievedChunks,
   })
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.LLM_API_KEY
+  const geminiApiKey = process.env.GEMINI_API_KEY
+  const geminiBaseUrl = process.env.GEMINI_BASE_URL?.trim()
+  const geminiModel = process.env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash'
+  const apiKey = geminiApiKey || process.env.OPENAI_API_KEY || process.env.LLM_API_KEY
 
   if (!apiKey) {
     res.statusCode = 530
@@ -177,10 +180,10 @@ export default async function chatHandler(req, res) {
   }
 
   // Handle Gemini (non-streaming generateContent to avoid WSARECV/TCP-abort on Windows)
-  if (process.env.GEMINI_API_KEY || (apiKey && apiKey.startsWith('AIza'))) {
-    const key = process.env.GEMINI_API_KEY || apiKey
+  if (!geminiBaseUrl && (geminiApiKey || (apiKey && apiKey.startsWith('AIza')))) {
+    const key = geminiApiKey || apiKey
     // Use the non-streaming endpoint — one complete JSON response, no keep-alive stream.
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`
 
     const promptText = `${systemPrompt}\n\nUser Message:\n${lastUserMessage}`
 
@@ -253,17 +256,25 @@ export default async function chatHandler(req, res) {
   }
 
   // Handle OpenAI (non-streaming to avoid TCP-abort on Windows)
-  if (process.env.OPENAI_API_KEY || apiKey) {
-    const key = process.env.OPENAI_API_KEY || apiKey
+  const useGeminiOpenAiEndpoint = Boolean(geminiBaseUrl && geminiApiKey)
+  if (useGeminiOpenAiEndpoint || process.env.OPENAI_API_KEY || apiKey) {
+    const key = useGeminiOpenAiEndpoint ? geminiApiKey : process.env.OPENAI_API_KEY || apiKey
+    const endpoint = useGeminiOpenAiEndpoint
+      ? `${geminiBaseUrl.replace(/\/+$/, '')}/chat/completions`
+      : 'https://api.openai.com/v1/chat/completions'
+    const model = useGeminiOpenAiEndpoint
+      ? geminiModel
+      : process.env.OPENAI_MODEL || 'gpt-4o-mini'
+    const providerName = useGeminiOpenAiEndpoint ? 'Gemini OpenAI-compatible' : 'OpenAI'
     try {
-      const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+      const openAiRes = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model,
           messages: [
             { role: 'system', content: systemPrompt },
             ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -278,7 +289,7 @@ export default async function chatHandler(req, res) {
         const errText = await openAiRes.text()
         res.statusCode = openAiRes.status
         res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ error: `OpenAI API error: ${errText}` }))
+        res.end(JSON.stringify({ error: `${providerName} API error: ${errText}` }))
         return
       }
 
@@ -288,7 +299,7 @@ export default async function chatHandler(req, res) {
       if (!rawFullText) {
         res.statusCode = 502
         res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ error: 'OpenAI returned an empty response.' }))
+        res.end(JSON.stringify({ error: `${providerName} returned an empty response.` }))
         return
       }
 
@@ -311,11 +322,11 @@ export default async function chatHandler(req, res) {
       res.end()
       return
     } catch (err) {
-      console.error('OpenAI handler error:', err)
+      console.error(`${providerName} handler error:`, err)
       if (!res.headersSent) {
         res.statusCode = 500
         res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ error: err.message || 'OpenAI request failed.' }))
+        res.end(JSON.stringify({ error: err.message || `${providerName} request failed.` }))
       } else {
         res.end()
       }
