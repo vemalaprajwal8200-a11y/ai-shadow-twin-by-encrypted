@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #0f172a;
+  background: #f8fafc;
+  font-family: Inter, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(148, 163, 184, 0.08), rgba(148, 163, 184, 0.02)),
+    #f8fafc;
+}
+
+.dark body {
+  background: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.card {
+  @apply rounded-2xl border border-slate-200 bg-white shadow-soft;
+}
+
+.dark .card {
+  @apply border-slate-700 bg-slate-900;
+}
+
+.sidebar-link {
+  @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900;
+}
+
+.dark .sidebar-link {
+  @apply text-slate-300 hover:bg-slate-800 hover:text-white;
+}
+
+.sidebar-link.active {
+  @apply bg-blue-50 text-blue-700;
+}
+
+.dark .sidebar-link.active {
+  @apply bg-blue-900/30 text-blue-200;
+}
+
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+}
+
+.badge-defect {
+  @apply bg-red-100 text-red-700;
+}
+
+.badge-ability {
+  @apply bg-blue-100 text-blue-700;
+}
+
+.badge-clean {
+  @apply bg-emerald-100 text-emerald-700;
+}
+
+.badge-high {
+  @apply bg-red-100 text-red-700;
+}
+
+.badge-medium {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.badge-low {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}

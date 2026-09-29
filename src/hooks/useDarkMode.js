@@ -1,0 +1,19 @@
+import { useEffect, useState } from 'react'
+
+export function useDarkMode() {
+  const [darkMode, setDarkMode] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('shadow-twin-theme')
+    if (saved === 'dark') {
+      setDarkMode(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+    localStorage.setItem('shadow-twin-theme', darkMode ? 'dark' : 'light')
+  }, [darkMode])
+
+  return [darkMode, setDarkMode]
+}
