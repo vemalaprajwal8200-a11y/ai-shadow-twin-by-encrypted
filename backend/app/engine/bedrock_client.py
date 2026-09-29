@@ -1,121 +1,111 @@
+"""Lazy AWS Bedrock Converse client with JSON parsing and one repair attempt."""
+
 import json
 import os
 import time
+from pathlib import Path
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
+from dotenv import load_dotenv
 
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 _client = None
 
 
-def _get_client(region: str):
+def _get_client():
     global _client
+    region = os.getenv("AWS_REGION")
+    model_id = os.getenv("BEDROCK_MODEL_ID")
+    if not region:
+        raise RuntimeError("Missing AWS_REGION in environment or backend/.env")
+    if not model_id:
+        raise RuntimeError("Missing BEDROCK_MODEL_ID in environment or backend/.env")
     if _client is None:
         _client = boto3.client("bedrock-runtime", region_name=region)
-    return _client
+    return _client, model_id
 
 
-def _required_environment_value(name: str) -> str:
-    value = os.getenv(name)
-    if not value:
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    return value
-
-
-def _converse_with_throttle_retry(client, request: dict) -> dict:
-    for attempt in range(5):
+def _converse(client: Any, request: dict) -> dict:
+    for attempt in range(4):
         try:
             return client.converse(**request)
         except ClientError as exc:
-            error_code = exc.response.get("Error", {}).get("Code")
-            if error_code != "ThrottlingException" or attempt == 4:
+            code = exc.response.get("Error", {}).get("Code")
+            if code != "ThrottlingException" or attempt == 3:
                 raise
             time.sleep(2**attempt)
+    raise RuntimeError("Bedrock request did not complete")
 
 
-def _response_text(response: dict) -> str:
-    content = response["output"]["message"]["content"]
-    return "".join(block.get("text", "") for block in content if "text" in block)
+def _text(response: dict) -> str:
+    return "".join(
+        block.get("text", "")
+        for block in response["output"]["message"]["content"]
+        if "text" in block
+    )
 
 
-def _strip_fences(text: str) -> str:
-    cleaned = text.strip()
-    if cleaned.startswith("```"):
-        newline = cleaned.find("\n")
-        if newline >= 0:
-            cleaned = cleaned[newline + 1 :]
-        else:
-            cleaned = cleaned[3:]
-    cleaned = cleaned.rstrip()
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]
-    return cleaned.strip()
+def _parse_json(raw: str) -> dict:
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1]
+        if text.rstrip().endswith("```"):
+            text = text.rstrip()[:-3]
+    parsed = json.loads(text.strip())
+    if not isinstance(parsed, dict):
+        raise ValueError("Expected a JSON object")
+    return parsed
 
 
-def _token_counts(response: dict) -> tuple[int, int]:
-    usage = response.get("usage", {})
-    return usage.get("inputTokens") or 0, usage.get("outputTokens") or 0
-
-
-def invoke_json(
-    system: str,
-    user: str,
-    temperature: float = 0.2,
-    max_tokens: int = 500,
-) -> dict:
-    started_at = time.perf_counter()
-    region = _required_environment_value("AWS_REGION")
-    model_id = _required_environment_value("BEDROCK_MODEL_ID")
-    client = _get_client(region)
-    inference_config = {"maxTokens": max_tokens, "temperature": temperature}
+def _invoke(system: str, user: str, temperature: float, max_tokens: int) -> dict:
+    client, model_id = _get_client()
     messages = [{"role": "user", "content": [{"text": user}]}]
     request = {
         "modelId": model_id,
         "system": [{"text": system}],
         "messages": messages,
-        "inferenceConfig": inference_config,
+        "inferenceConfig": {"maxTokens": max_tokens, "temperature": temperature},
     }
-
-    response = _converse_with_throttle_retry(client, request)
-    raw = _response_text(response)
-    input_tokens, output_tokens = _token_counts(response)
-
+    started = time.perf_counter()
+    response = _converse(client, request)
+    raw = _text(response)
+    input_tokens = response.get("usage", {}).get("inputTokens", 0)
+    output_tokens = response.get("usage", {}).get("outputTokens", 0)
     try:
-        parsed = json.loads(_strip_fences(raw))
-    except json.JSONDecodeError:
-        repair_request = {
-            **request,
-            "messages": [
-                *messages,
-                response["output"]["message"],
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "text": "Return the same answer as valid JSON only. Do not include Markdown fences or commentary."
-                        }
-                    ],
-                },
-            ],
-        }
-        repaired_response = _converse_with_throttle_retry(client, repair_request)
-        repaired_raw = _response_text(repaired_response)
-        repaired_input_tokens, repaired_output_tokens = _token_counts(repaired_response)
-        input_tokens += repaired_input_tokens
-        output_tokens += repaired_output_tokens
+        parsed = _parse_json(raw)
+    except (json.JSONDecodeError, ValueError):
+        request["messages"] = [
+            *messages,
+            response["output"]["message"],
+            {"role": "user", "content": [{"text": "Reply with valid JSON only. Return the same answer."}]},
+        ]
+        response = _converse(client, request)
+        raw = _text(response)
+        usage = response.get("usage", {})
+        input_tokens += usage.get("inputTokens", 0)
+        output_tokens += usage.get("outputTokens", 0)
         try:
-            parsed = json.loads(_strip_fences(repaired_raw))
-        except json.JSONDecodeError as exc:
-            raise ValueError(
-                "Model returned invalid JSON after one repair. "
-                f"Raw text: {repaired_raw!r}; initial raw text: {raw!r}"
-            ) from exc
-        raw = repaired_raw
-
+            parsed = _parse_json(raw)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise ValueError(f"Bedrock returned invalid JSON: {raw!r}") from exc
     return {
         "parsed": parsed,
         "raw": raw,
-        "latency_s": time.perf_counter() - started_at,
+        "latency_s": time.perf_counter() - started,
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
     }
+
+
+def ask(prompt: str, temperature: float = 0.5) -> dict:
+    """Ask Bedrock for a JSON object using the configured model and region."""
+    return _invoke("Reply only with valid JSON.", prompt, temperature, 1000)["parsed"]
+
+
+def invoke_json(
+    system: str, user: str, temperature: float = 0.2, max_tokens: int = 500
+) -> dict:
+    """Compatibility wrapper for the existing /twin/ask response shape."""
+    return _invoke(system, user, temperature, max_tokens)
