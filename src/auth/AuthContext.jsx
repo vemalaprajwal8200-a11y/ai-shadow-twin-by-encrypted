@@ -91,7 +91,7 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(user),
     configured: isSupabaseConfigured(),
-    async sendEmailCode(
+    async sendMagicLink(
       email,
       { shouldCreateUser = false, displayName = '', studentId = '', requestedRole = 'student' } = {},
     ) {
@@ -100,6 +100,7 @@ export function AuthProvider({ children }) {
         email: email.trim(),
         options: {
           shouldCreateUser,
+          emailRedirectTo: `${window.location.origin}/login`,
           ...(shouldCreateUser && {
             data: {
               display_name: displayName.trim(),
@@ -110,20 +111,6 @@ export function AuthProvider({ children }) {
         },
       })
       if (error) throw error
-    },
-    async verifyEmailCode(email, code) {
-      const client = getSupabaseClient()
-      const { data, error } = await client.auth.verifyOtp({
-        email: email.trim(),
-        token: code.trim(),
-        type: 'email',
-      })
-      if (error) throw error
-      if (!data.user) throw new Error('The email code did not return an account.')
-
-      const profileUser = await getProfileUser(client, data.user)
-      setUser(profileUser)
-      return profileUser
     },
     async logout() {
       const client = getSupabaseClient()

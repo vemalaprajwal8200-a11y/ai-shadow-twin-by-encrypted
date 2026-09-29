@@ -1,6 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import About from '../pages/About'
 import Login from '../pages/Login'
 
 /** @param {{ children: import('react').ReactNode }} props */
@@ -15,9 +14,12 @@ export function ProtectedRoute({ children }) {
 }
 
 export function LoginRoute() {
-  const { isAuthenticated, loading } = useAuth()
+  const { user, isAuthenticated, loading } = useAuth()
   if (loading) return <div className="grid min-h-screen place-items-center bg-bg text-sm text-muted" role="status">Checking your session...</div>
-  return isAuthenticated ? <About /> : <Login />
+  if (!isAuthenticated) return <Login />
+
+  const facultyAccessPending = user?.requestedRole === 'faculty' && user.role !== 'faculty'
+  return <Navigate to="/dashboard" replace state={{ facultyAccessPending }} />
 }
 
 /** @param {{ allowedRoles: Array<'student' | 'faculty'>, children?: import('react').ReactNode }} props */
