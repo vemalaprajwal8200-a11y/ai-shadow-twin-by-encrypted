@@ -6,17 +6,18 @@
 <title>404 - Page not found</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="/theme.css" />
 <link href="https://fonts.googleapis.com/css2?family=Arvo&family=Roboto:wght@300&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --color-primary: 46 111 64;
-    --color-primary-light: 104 186 127;
-    --color-surface-tint: 207 255 220;
-    --color-ink: 37 61 44;
-    --color-page: 244 255 247;
-    --color-white: 255 255 255;
-    --color-muted: 81 99 85;
-    --color-ambiguous: 224 160 48;
+    --color-primary: var(--rgb-primary);
+    --color-primary-light: var(--rgb-accent);
+    --color-surface-tint: var(--rgb-soft);
+    --color-ink: var(--rgb-text);
+    --color-page: var(--rgb-bg);
+    --color-white: var(--rgb-card);
+    --color-muted: var(--rgb-muted);
+    --color-ambiguous: var(--rgb-ambiguous);
     --t: 9s;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }

@@ -66,7 +66,7 @@ function NavGroup({ group, isOpen, onToggle, onNavigate }) {
           <Icon className="h-4 w-4 shrink-0" />
           <span className="truncate">{group.label}</span>
           {group.badge && (
-            <span className="ml-auto rounded-md bg-[#CFFFDC] text-[#2E6F40] dark:bg-emerald-950 dark:text-emerald-300 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
+            <span className="ml-auto rounded-md bg-soft text-soft-text px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
               {group.badge}
             </span>
           )}
@@ -141,7 +141,7 @@ export default function SidebarNav({ groups, onNavigate }) {
     <nav aria-label="Main" className="space-y-5">
       {navGroups.map((group) => (
         <section key={group.to} aria-label={group.label}>
-          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-sidebar-fg/45">{group.label}</p>
+          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-sidebar-fg">{group.label}</p>
           <NavGroup
             group={group}
             isOpen={openGroup === group.to}
@@ -165,7 +165,7 @@ export function StudentBottomNav() {
         const Icon = tab.icon
         const active = location.pathname === tab.to
         return (
-          <NavLink key={tab.to} to={tab.to} aria-current={active ? 'page' : undefined} className={`flex min-w-0 flex-col items-center gap-1 px-1 py-2 text-[10px] font-medium ${active ? 'text-accent' : 'text-sidebar-fg/75'}`}>
+          <NavLink key={tab.to} to={tab.to} aria-current={active ? 'page' : undefined} className={`flex min-w-0 flex-col items-center gap-1 px-1 py-2 text-[10px] font-medium ${active ? 'text-soft' : 'text-sidebar-fg'}`}>
             <Icon aria-hidden="true" className="h-4 w-4" />
             <span className="max-w-full truncate">{tab.label}</span>
           </NavLink>

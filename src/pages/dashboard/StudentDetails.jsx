@@ -18,7 +18,7 @@ import { useAuth } from '../../auth/AuthContext'
 
 const statusRank = { 'At risk': 3, 'Needs support': 2, 'On track': 1 }
 const statusStyle = {
-  'On track': 'bg-primary/10 text-primary',
+  'On track': 'bg-success-bg text-success-text',
   'Needs support': 'bg-ambiguous/15 text-ink',
   'At risk': 'bg-danger/10 text-danger',
 }
@@ -186,7 +186,7 @@ function StudentDrawer({ student, students, onClose }) {
 
         <footer className="grid grid-cols-2 gap-3 border-t border-border/60 p-4 sm:p-5">
           <button type="button" disabled title="Coming soon" className="rounded-xl border border-border px-3 py-2.5 text-sm font-medium text-muted disabled:cursor-not-allowed disabled:opacity-60">Message student</button>
-          <button type="button" onClick={exportStudent} className="inline-flex items-center justify-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2.5 text-sm font-medium text-primary hover:bg-surface-tint/80"><ArrowDownToLine aria-hidden="true" className="h-4 w-4" />Export report</button>
+          <button type="button" onClick={exportStudent} className="inline-flex items-center justify-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2.5 text-sm font-medium text-soft-text hover:bg-surface-tint/80"><ArrowDownToLine aria-hidden="true" className="h-4 w-4" />Export report</button>
         </footer>
       </aside>
     </div>
@@ -315,7 +315,7 @@ export default function StudentDetails({ courseId }) {
           <Card className="hidden overflow-hidden md:block">
             <div className="max-h-[calc(100vh-25rem)] overflow-auto">
               <table className="w-full min-w-[1050px] text-left text-sm" aria-label="Student performance roster">
-                <thead className="sticky top-0 z-10 bg-surface-tint text-xs uppercase tracking-wide text-ink shadow-[0_1px_0_rgb(var(--border)_/_0.5)] dark:bg-primary dark:text-surface-tint">
+                <thead className="sticky top-0 z-10 bg-surface-tint text-xs uppercase tracking-wide text-soft-text shadow-[0_1px_0_rgb(var(--border)_/_0.5)] dark:bg-card dark:text-text">
                   <tr>
                     <th scope="col" className="px-4 py-3">Student</th>
                     <th scope="col" className="px-3 py-3">Overall</th>
@@ -351,7 +351,7 @@ export default function StudentDetails({ courseId }) {
             ))}
           </div>
 
-          {visibleCount < filteredStudents.length && <div className="text-center"><button type="button" onClick={() => setVisibleCount((count) => count + 10)} className="rounded-xl border border-surface-tint bg-surface-tint px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface-tint/80">Show more</button></div>}
+          {visibleCount < filteredStudents.length && <div className="text-center"><button type="button" onClick={() => setVisibleCount((count) => count + 10)} className="rounded-xl border border-surface-tint bg-surface-tint px-4 py-2.5 text-sm font-medium text-soft-text hover:bg-surface-tint/80">Show more</button></div>}
         </>
       )}
 

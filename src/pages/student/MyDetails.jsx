@@ -122,7 +122,7 @@ function StudentProfileEditor({ user, updateStudentDetails }) {
       {emailDetailsOpen && <div className="fixed inset-0 z-[60] grid place-items-center bg-ink/35 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEmailDetailsOpen(false) }}>
         <section role="dialog" aria-modal="true" aria-labelledby="email-details-title" className="w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-soft sm:p-6">
           <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-surface-tint text-ink"><Lock aria-hidden="true" className="h-4 w-4" /></span>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-surface-tint text-soft-text"><Lock aria-hidden="true" className="h-4 w-4" /></span>
             <div className="min-w-0">
               <h2 id="email-details-title" className="text-lg font-semibold text-heading">Managed by your account</h2>
               <p className="mt-1 text-sm leading-5 text-muted">This email is used for sign-in and account messages. It can’t be changed from this profile form.</p>
@@ -220,7 +220,7 @@ export default function MyDetails() {
 
       <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div><p className="text-xs font-semibold uppercase tracking-wide text-muted">NEXT STEP</p><h2 className="mt-1 font-semibold text-heading">Revise Unit {student.unitScores.indexOf(Math.min(...student.unitScores)) + 1}: {recommendation}</h2></div>
-        <Link to="/topics/dashboard/plan" className="inline-flex shrink-0 items-center justify-center rounded-xl border border-surface-tint bg-surface-tint px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface-tint/80">Open study plan</Link>
+        <Link to="/topics/dashboard/plan" className="inline-flex shrink-0 items-center justify-center rounded-xl border border-surface-tint bg-surface-tint px-4 py-2.5 text-sm font-medium text-soft-text hover:bg-surface-tint/80">Open study plan</Link>
       </Card>
     </div>
   )

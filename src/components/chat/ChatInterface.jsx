@@ -333,16 +333,16 @@ export default function ChatInterface({
       {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3.5 sm:px-5">
         <div className="flex items-center gap-3">
-          {/* Twin avatar: mint circle with sparkle icon */}
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#CFFFDC] text-[#2E6F40] shadow-xs">
+          {/* Twin avatar: soft circle with sparkle icon */}
+          <div className="twin-avatar flex h-10 w-10 items-center justify-center rounded-full bg-soft text-primary shadow-xs">
             <Sparkles className="h-5 w-5" />
           </div>
 
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-lg text-heading leading-none">Shadow-Twin</h2>
-              <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="flex items-center gap-1.5 rounded-full bg-success-bg px-2 py-0.5 text-xs font-semibold text-success-text border border-success-border">
+                <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
                 {isStreaming ? 'Thinking...' : isApiHealthy ? 'Ready' : 'Offline Mode'}
               </span>
             </div>
@@ -367,7 +367,7 @@ export default function ChatInterface({
           <button
             type="button"
             onClick={handleNewChat}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-bg px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-primary hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-bg px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-primary hover:text-primary-fg"
           >
             <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">New chat</span>
@@ -388,9 +388,9 @@ export default function ChatInterface({
 
       {/* Offline Banner */}
       {offlineError && (
-        <div className="flex items-center justify-between border-b border-amber-200 bg-amber-50 dark:bg-amber-950/50 px-4 py-2.5 text-xs text-amber-800 dark:text-amber-200">
+        <div className="flex items-center justify-between border-b border-ambiguous-border bg-ambiguous-bg px-4 py-2.5 text-xs text-ambiguous-text">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+            <AlertCircle className="h-4 w-4 text-ambiguous shrink-0" />
             <span>{offlineError}</span>
           </div>
           <button
@@ -399,7 +399,7 @@ export default function ChatInterface({
               await refreshApiHealth()
               if (lastFailedMessageRef.current) handleSendMessage(lastFailedMessageRef.current, true)
             }}
-            className="inline-flex items-center gap-1 rounded-lg bg-amber-200 dark:bg-amber-800 px-2.5 py-1 font-semibold text-amber-900 dark:text-amber-100 hover:bg-amber-300 transition"
+            className="inline-flex items-center gap-1 rounded-lg bg-ambiguous/20 px-2.5 py-1 font-semibold text-ambiguous-text hover:bg-ambiguous/30 transition"
           >
             <RefreshCcw className="h-3 w-3" />
             Retry
@@ -416,7 +416,7 @@ export default function ChatInterface({
         {messages.length === 0 && !isStreaming ? (
           /* Empty State */
           <div className="flex h-full flex-col items-center justify-center py-8 text-center max-w-lg mx-auto">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#CFFFDC] text-[#2E6F40] shadow-md">
+            <div className="twin-avatar mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-soft text-primary shadow-md">
               <Sparkles className="h-8 w-8" />
             </div>
 
@@ -432,7 +432,7 @@ export default function ChatInterface({
                   key={idx}
                   type="button"
                   onClick={() => handleSendMessage(prompt)}
-                  className="rounded-2xl border border-primary/20 bg-[#CFFFDC]/40 dark:bg-primary/10 p-3 text-left text-xs font-semibold text-[#2E6F40] dark:text-primary transition-all duration-200 hover:bg-[#CFFFDC] dark:hover:bg-primary/20 hover:shadow-sm hover:-translate-y-0.5"
+                  className="rounded-2xl border border-border bg-soft p-3 text-left text-xs font-semibold text-soft-text transition-all duration-200 hover:bg-soft hover:shadow-sm hover:-translate-y-0.5"
                 >
                   "{prompt}"
                 </button>
@@ -441,7 +441,7 @@ export default function ChatInterface({
           </div>
         ) : (
           <>
-            <div className="text-center text-[11px] font-bold uppercase tracking-wider text-muted/70 my-2">
+              <div className="text-center text-[11px] font-bold uppercase tracking-wider text-muted my-2">
               Today
             </div>
 
@@ -459,10 +459,10 @@ export default function ChatInterface({
             {/* Streamed Token-by-token message bubble while streaming */}
             {isStreaming && (
               <div className="flex items-start gap-3 my-4">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#CFFFDC] text-[#2E6F40] shadow-xs">
+                <div className="twin-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-soft text-primary shadow-xs">
                   <Sparkles className="h-4 w-4 animate-spin" />
                 </div>
-                <div className="max-w-[90%] rounded-2xl rounded-tl-xs border border-[#E3EEE6] dark:border-border bg-white dark:bg-surface px-4 py-3.5 shadow-xs">
+                <div className="max-w-[90%] rounded-2xl rounded-tl-xs border border-border bg-surface px-4 py-3.5 shadow-xs">
                   <div className="mb-1 text-xs font-bold text-heading">Shadow-Twin</div>
 
                   {streamingContent ? (
@@ -477,9 +477,9 @@ export default function ChatInterface({
                   ) : (
                     /* 3 Pulsing typing indicator dots */
                     <div className="flex items-center gap-1.5 py-2">
-                      <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="h-2 w-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="h-2 w-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="h-2 w-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   )}
                 </div>
@@ -501,7 +501,7 @@ export default function ChatInterface({
               <button
                 type="button"
                 onClick={() => handleRemoveAttachment(idx)}
-                className="rounded p-0.5 hover:bg-black/10 text-muted"
+                className="rounded p-0.5 hover:bg-text/10 text-muted"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -519,7 +519,7 @@ export default function ChatInterface({
           }}
           className="flex flex-col gap-2"
         >
-          <div className="relative flex items-end gap-2 rounded-2xl border border-border bg-bg p-2 transition focus-within:border-primary focus-within:ring-2 focus-within:ring-[#68BA7F]/20">
+          <div className="relative flex items-end gap-2 rounded-2xl border border-border bg-bg p-2 transition focus-within:border-primary focus-within:ring-2 focus-within:ring-focus/20">
             {/* Hidden File Input */}
             <input
               type="file"
@@ -556,16 +556,16 @@ export default function ChatInterface({
               <button
                 type="button"
                 onClick={handleStopStreaming}
-                className="rounded-xl bg-danger p-2.5 text-white transition hover:bg-danger/90"
+                className="rounded-xl bg-danger p-2.5 text-primary-fg transition hover:bg-danger/90"
                 title="Stop response"
               >
-                <Square className="h-4 w-4 fill-white" />
+                <Square className="h-4 w-4 fill-primary-fg" />
               </button>
             ) : (
               <button
                 type="submit"
                 disabled={!input.trim()}
-                className="rounded-xl bg-primary p-2.5 text-primary-fg transition hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="rounded-xl bg-primary p-2.5 text-primary-fg transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-muted"
                 title="Send message"
               >
                 <Send className="h-4 w-4" />

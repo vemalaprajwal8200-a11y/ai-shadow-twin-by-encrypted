@@ -34,7 +34,7 @@ export default function TopBar({ course, courses, onCourseChange, onMenuClick })
   }
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-[76px] items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex min-h-[76px] items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3 sm:px-6 lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <button type="button" onClick={onMenuClick} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border text-text transition-colors hover:bg-page lg:hidden" aria-label="Open navigation">
           <Menu aria-hidden="true" className="h-5 w-5" />

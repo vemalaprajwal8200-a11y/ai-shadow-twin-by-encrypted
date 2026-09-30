@@ -11,7 +11,7 @@ export function StudentStatusPill({ status }) {
 
 const outcomeStyles = {
   content_defect_confirmed: 'border-danger/30 bg-danger/10 text-danger',
-  ability_gap_confirmed: 'border-ability-gap/40 bg-ability-gap/10 text-ink dark:bg-surface dark:text-sidebar-fg',
+  ability_gap_confirmed: 'border-ability-gap-border bg-ability-gap-bg text-ability-gap-text',
   genuine_miss: 'border-warn/30 bg-warn/20 text-ink dark:bg-warn dark:text-ink',
 }
 
@@ -23,7 +23,7 @@ const outcomeLabels = {
 
 /** @param {{ outcome: import('../../data/students').StudentOutcome }} props */
 export function StudentOutcomePill({ outcome }) {
-  const tone = outcome === 'content_defect_confirmed' ? 'danger' : outcome === 'ability_gap_confirmed' ? 'info' : 'warning'
+  const tone = outcome === 'content_defect_confirmed' ? 'danger' : outcome === 'ability_gap_confirmed' ? 'abilityGap' : 'warning'
   return <Badge tone={tone} className={`max-w-full border ${outcomeStyles[outcome]}`}>{outcomeLabels[outcome]}</Badge>
 }
 

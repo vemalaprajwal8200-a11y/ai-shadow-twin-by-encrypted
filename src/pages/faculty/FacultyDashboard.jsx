@@ -23,7 +23,7 @@ import { useAuth } from '../../auth/AuthContext'
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 const statusStyle = {
-  'On track': { bg: 'bg-primary/10 text-primary', dot: 'bg-primary' },
+  'On track': { bg: 'bg-success-bg text-success-text', dot: 'bg-success' },
   'Needs support': { bg: 'bg-ambiguous/15 text-ink', dot: 'bg-ambiguous' },
   'At risk': { bg: 'bg-danger/10 text-danger', dot: 'bg-danger' },
 }
@@ -342,7 +342,7 @@ export default function FacultyDashboard({ courseId }) {
       label: 'On track',
       value: loading ? '—' : onTrackCount,
       icon: GraduationCap,
-      accent: 'bg-primary/10 text-primary',
+      accent: 'bg-success-bg text-success-text',
       sub: students.length ? `${Math.round((onTrackCount / students.length) * 100)}% of class` : '',
     },
     {

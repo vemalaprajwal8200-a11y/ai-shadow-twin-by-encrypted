@@ -110,7 +110,7 @@ export default function MarkdownRenderer({ content, itemCards = [], onNavigate }
       }
       if (token.startsWith('`') && token.endsWith('`')) {
         return (
-          <code key={idx} className="rounded bg-black/5 dark:bg-white/10 px-1.5 py-0.5 font-mono text-xs text-primary">
+          <code key={idx} className="rounded bg-text/5 dark:bg-card/10 px-1.5 py-0.5 font-mono text-xs text-primary">
             {token.slice(1, -1)}
           </code>
         )

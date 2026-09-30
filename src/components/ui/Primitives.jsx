@@ -74,12 +74,13 @@ export function Select({ children, ...props }) {
 }
 
 const badgeStyles = {
-  success: 'bg-primary/10 text-primary',
+  success: 'border border-success-border bg-success-bg text-success-text',
   warning: 'bg-ambiguous/15 text-ink',
   danger: 'bg-danger/10 text-danger',
-  info: 'bg-ability-gap/10 text-ink ring-1 ring-ability-gap/35',
+  info: 'bg-info/10 text-primary',
+  abilityGap: 'border border-ability-gap-border bg-ability-gap-bg text-ability-gap-text',
   neutral: 'bg-page text-muted',
-  brand: 'bg-surface-tint text-ink',
+  brand: 'bg-soft text-soft-text',
 }
 
 export function Badge({ tone = 'neutral', icon: Icon, className = '', children }) {
@@ -95,14 +96,14 @@ export function Avatar({ name = '', size = 'md', className = '' }) {
   const initials = name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'ST'
   const dimensions = { sm: 'h-8 w-8 text-xs', md: 'h-10 w-10 text-sm', lg: 'h-16 w-16 text-xl' }
   return (
-    <span aria-label={name ? `${name} avatar` : 'User avatar'} className={`inline-grid shrink-0 place-items-center rounded-full bg-surface-tint font-semibold text-ink ring-1 ring-border ${dimensions[size] || dimensions.md} ${className}`}>
+    <span aria-label={name ? `${name} avatar` : 'User avatar'} className={`inline-grid shrink-0 place-items-center rounded-full bg-soft font-semibold text-soft-text ring-1 ring-border ${dimensions[size] || dimensions.md} ${className}`}>
       {initials}
     </span>
   )
 }
 
 const alertStyles = {
-  info: { Icon: Info, classes: 'border-info/20 bg-info/5 text-info' },
+  info: { Icon: Info, classes: 'border-accent/20 bg-accent/5 text-text' },
   success: { Icon: CheckCircle2, classes: 'border-success/20 bg-success/5 text-success' },
   warning: { Icon: AlertTriangle, classes: 'border-ambiguous/25 bg-ambiguous/10 text-ink' },
   danger: { Icon: AlertCircle, classes: 'border-danger/20 bg-danger/5 text-danger' },
@@ -138,7 +139,7 @@ export function Toast({ message, onClose, variant = 'success' }) {
 export function EmptyState({ icon: Icon = Info, title, description, action, className = '' }) {
   return (
     <div className={`empty-state ${className}`}>
-      <span className="empty-state-icon"><Icon aria-hidden="true" className="h-5 w-5" /></span>
+      <span className="empty-state-icon"><Icon aria-hidden="true" className="h-5 w-5 text-soft-text" /></span>
       {title && <h2 className="mt-4 text-base font-semibold text-heading">{title}</h2>}
       {description && <p className="mt-1 max-w-md text-sm leading-5 text-muted">{description}</p>}
       {action && <div className="mt-4">{action}</div>}

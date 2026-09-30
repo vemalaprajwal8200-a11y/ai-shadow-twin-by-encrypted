@@ -15,26 +15,26 @@ export default function ItemCard({ id, title, verdict, reason, onNavigate }) {
     switch (v) {
       case 'Content defect':
         return {
-          badgeClass: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-900',
+          badgeClass: 'bg-danger-bg text-danger border-danger-border',
           icon: AlertTriangle,
           label: 'Content defect',
         }
       case 'Ambiguous':
         return {
-          badgeClass: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900',
+          badgeClass: 'bg-ambiguous-bg text-ambiguous-text border-ambiguous-border',
           icon: HelpCircle,
           label: 'Ambiguous',
         }
       case 'Ability gap':
         return {
-          badgeClass: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-900',
+          badgeClass: 'bg-ability-gap-bg text-ability-gap-text border-ability-gap-border',
           icon: Info,
           label: 'Ability gap',
         }
       case 'Clean':
       default:
         return {
-          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
+          badgeClass: 'bg-success-bg text-success-text border-success-border',
           icon: Check,
           label: 'Clean',
         }
@@ -58,7 +58,7 @@ export default function ItemCard({ id, title, verdict, reason, onNavigate }) {
         <Link
           to={`/content/${id}`}
           onClick={onNavigate}
-          className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-medium text-primary border border-border transition hover:bg-primary hover:text-white"
+          className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-medium text-primary border border-border transition hover:bg-primary hover:text-primary-fg"
         >
           View item
           <ArrowRight className="h-3 w-3" />

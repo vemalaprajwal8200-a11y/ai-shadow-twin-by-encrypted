@@ -23,13 +23,13 @@ export default function SlideOverChatPanel({ courseId, onCourseChange }) {
 
   return (
     <>
-      {/* Floating Round Chat Button (bottom-right, #2E6F40, sparkle icon) */}
+      {/* Floating round chat button */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-label="Open Ask the Twin Chat"
         aria-expanded={isOpen}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#2E6F40] text-white shadow-2xl transition-all duration-300 hover:scale-110 hover:bg-[#253D2C] focus-visible:outline-2 focus-visible:outline-[#68BA7F]"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-fg shadow-2xl transition-all duration-300 hover:scale-110 hover:bg-primary-hover"
       >
         <Sparkles className="h-6 w-6" />
       </button>
@@ -39,7 +39,7 @@ export default function SlideOverChatPanel({ courseId, onCourseChange }) {
         <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l border-border bg-surface shadow-2xl student-drawer">
           <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#CFFFDC] text-[#2E6F40]">
+              <div className="twin-avatar flex h-7 w-7 items-center justify-center rounded-full bg-soft text-primary">
                 <Sparkles className="h-4 w-4" />
               </div>
               <span className="font-bold text-sm text-heading">Ask the Twin</span>

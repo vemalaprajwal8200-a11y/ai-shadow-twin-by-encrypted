@@ -20,7 +20,7 @@ export function Section({ id, eyebrow, title, children, className = '' }) {
 export function FeatureCard({ icon, title, children }) {
   return (
     <article className="card h-full p-5 transition-colors duration-200 hover:border-primary/50">
-      <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-surface-tint text-ink" aria-hidden="true">{icon}</span>
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-surface-tint text-soft-text" aria-hidden="true">{icon}</span>
       <h3 className="mt-4 text-base font-semibold text-heading">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-muted">{children}</p>
     </article>

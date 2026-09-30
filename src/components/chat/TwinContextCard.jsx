@@ -256,7 +256,7 @@ export default function TwinContextCard({
                     <button
                       type="button"
                       onClick={(e) => handleStartRename(chat, e)}
-                      className="rounded p-1 hover:bg-black/10 dark:hover:bg-white/10"
+                      className="rounded p-1 hover:bg-text/10 dark:hover:bg-card/10"
                       title="Rename"
                     >
                       <Edit2 className="h-3 w-3" />
@@ -264,7 +264,7 @@ export default function TwinContextCard({
                     <button
                       type="button"
                       onClick={(e) => handleDelete(chat.id, e)}
-                      className="rounded p-1 hover:bg-red-500/20"
+                      className="rounded p-1 hover:bg-danger/20"
                       title="Delete"
                     >
                       <Trash2 className="h-3 w-3" />

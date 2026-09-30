@@ -184,13 +184,13 @@ export default function ItemDetailPage() {
               </div>
             </div>
             <div className="mt-4 flex gap-2">
-              <button className="inline-flex items-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-primary">
+              <button className="inline-flex items-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-soft-text">
                 <Copy className="h-4 w-4" /> Copy
               </button>
               <button disabled={saving} onClick={() => handleDecision('Fixed')} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-fg disabled:opacity-50">
                 <CheckCircle2 className="h-4 w-4" /> Accept
               </button>
-              <button disabled={saving} onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl bg-surface-tint px-3 py-2 text-sm font-medium text-primary disabled:opacity-50">
+              <button disabled={saving} onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl bg-surface-tint px-3 py-2 text-sm font-medium text-soft-text disabled:opacity-50">
                 <XCircle className="h-4 w-4" /> Dismiss
               </button>
             </div>
@@ -202,7 +202,7 @@ export default function ItemDetailPage() {
               <button disabled={saving} onClick={() => handleDecision('Confirmed')} className="inline-flex items-center gap-2 rounded-xl bg-danger px-3 py-2 text-sm font-medium text-primary-fg disabled:opacity-50">
                 <ShieldAlert className="h-4 w-4" /> Confirm defect
               </button>
-              <button disabled={saving} onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-primary disabled:opacity-50">
+              <button disabled={saving} onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-soft-text disabled:opacity-50">
                 <ShieldCheck className="h-4 w-4" /> Not a defect
               </button>
             </div>

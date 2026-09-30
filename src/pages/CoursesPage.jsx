@@ -220,7 +220,7 @@ export default function CoursesPage({ courseId, onCourseChange }) {
             </div>
           </div>
 
-          <label className={`flex min-h-28 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-bg p-5 text-center transition ${selectedCourseId ? 'cursor-pointer text-muted hover:border-primary hover:bg-surface' : 'cursor-not-allowed opacity-60 text-muted/80'}`}>
+          <label className={`flex min-h-28 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-bg p-5 text-center transition ${selectedCourseId ? 'cursor-pointer text-muted hover:border-primary hover:bg-surface' : 'cursor-not-allowed opacity-60 text-muted'}`}>
             <input
               type="file"
               multiple

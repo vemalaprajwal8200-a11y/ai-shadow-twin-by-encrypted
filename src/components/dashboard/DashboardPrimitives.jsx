@@ -5,9 +5,9 @@ import { Badge, Card as UiCard, PageHeader } from '../ui/Primitives'
 const chipClasses = {
   verdict: {
     'Content defect': 'bg-danger/10 text-danger',
-    'Ability gap': 'bg-ability-gap/10 text-ink ring-1 ring-ability-gap/35',
-    Clean: 'bg-primary/10 text-primary',
-    clear: 'bg-primary/10 text-primary',
+    'Ability gap': 'border border-ability-gap-border bg-ability-gap-bg text-ability-gap-text',
+    Clean: 'border border-success-border bg-success-bg text-success-text',
+    clear: 'border border-success-border bg-success-bg text-success-text',
     ambiguous: 'bg-ambiguous/15 text-ink',
     flawed: 'bg-danger/10 text-danger',
   },
@@ -20,13 +20,13 @@ const chipClasses = {
     low: 'bg-page text-muted',
   },
   status: {
-    Confirmed: 'bg-primary/10 text-primary',
+    Confirmed: 'border border-success-border bg-success-bg text-success-text',
     Dismissed: 'bg-page text-muted',
   },
 }
 
 const chipTones = {
-  verdict: { 'Content defect': 'danger', 'Ability gap': 'info', Clean: 'success', clear: 'success', ambiguous: 'warning', flawed: 'danger' },
+  verdict: { 'Content defect': 'danger', 'Ability gap': 'abilityGap', Clean: 'success', clear: 'success', ambiguous: 'warning', flawed: 'danger' },
   severity: { High: 'danger', Medium: 'warning', Low: 'neutral', high: 'danger', medium: 'warning', low: 'neutral' },
   status: { Confirmed: 'success', Dismissed: 'neutral' },
 }

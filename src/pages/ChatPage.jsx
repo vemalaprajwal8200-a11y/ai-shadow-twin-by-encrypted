@@ -97,7 +97,7 @@ export default function ChatPage({ courseId, onCourseChange }) {
 
       {/* Slide-over Drawer for Context Card on screens < 1100px */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs xl:hidden">
+        <div className="fixed inset-0 z-50 flex justify-end bg-overlay/40 backdrop-blur-xs xl:hidden">
           <div className="h-full w-full max-w-sm p-4 student-drawer bg-bg">
             <TwinContextCard
               courseId={courseId}
