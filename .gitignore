@@ -19,7 +19,7 @@ backend/.env.example
 backend/env.local
 .vercel/
 .aws/
-data/
+/data/
 uploads/
 venv/
 __pycache__/
