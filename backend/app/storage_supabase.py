@@ -1,9 +1,9 @@
 """Supabase storage adapter with explicit database/API field conversion."""
 
 import os
-from pathlib import Path
 
 from app.models import Finding, Item, Run
+from app.supabase_client import get_supabase_client, supabase_service_role_key, supabase_url
 
 _client = None
 _bucket = None
@@ -17,18 +17,20 @@ def initialize() -> None:
     """Validate settings and create the service-role client once at startup."""
     global _client, _bucket
 
-    required = ("SUPABASE_URL", "SUPABASE_SERVICE_KEY", "SUPABASE_BUCKET")
-    missing = [name for name in required if not os.getenv(name)]
+    required = {
+        "SUPABASE_URL": supabase_url(),
+        "SUPABASE_SERVICE_ROLE_KEY": supabase_service_role_key(),
+        "SUPABASE_BUCKET": (os.getenv("SUPABASE_BUCKET") or "").strip(),
+    }
+    missing = [name for name, value in required.items() if not value]
     if missing:
         raise RuntimeError(f"Missing required Supabase setting: {missing[0]}.")
     if _client is not None:
         return
 
     try:
-        from supabase import create_client
-
-        _client = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
-        _bucket = os.environ["SUPABASE_BUCKET"]
+        _client = get_supabase_client()
+        _bucket = required["SUPABASE_BUCKET"]
     except Exception:
         raise RuntimeError("Could not initialize the Supabase client.") from None
 

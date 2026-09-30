@@ -1,13 +1,11 @@
 """Choose local JSON or Supabase storage and keep the public API stable."""
 
 import os
-from pathlib import Path
 
-from dotenv import load_dotenv
-
+from app.settings import load_backend_environment
 from app.models import Finding, Item, Run
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+load_backend_environment()
 
 STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()
 if STORAGE_BACKEND not in {"local", "supabase"}:

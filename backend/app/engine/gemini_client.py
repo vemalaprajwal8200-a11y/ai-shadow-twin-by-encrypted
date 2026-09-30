@@ -6,12 +6,11 @@ import os
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
+from app.settings import load_backend_environment
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+load_backend_environment()
 
 logger = logging.getLogger(__name__)
 _RETRY_DELAYS = (1, 2, 4)

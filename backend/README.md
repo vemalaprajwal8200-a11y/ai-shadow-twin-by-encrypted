@@ -34,9 +34,41 @@ uvicorn app.main:app --reload
 
 Open the interactive API page at `http://127.0.0.1:8000/docs`.
 
+## Supabase-backed faculty workflows
+
+The dashboard tables and views are defined in `backend/docs/shadow_twin_supabase_schema.sql`. Run that full migration in the Supabase SQL Editor; the older `supabase_schema.sql` file is for the legacy `items/runs/findings` backend and does not define the faculty dashboard views.
+
+Set these backend-only variables in `backend/.env`:
+
+```dotenv
+STORAGE_BACKEND=supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_BUCKET=course-uploads
+OPENROUTER_API_KEY=your-openrouter-key
+OPENROUTER_MODEL=openai/gpt-4o
+GEMINI_API_KEY=your-gemini-key
+GEMINI_MODEL=gemini-flash-lite-latest
+CORS_ALLOW_ORIGINS=http://127.0.0.1:3000,http://localhost:3000
+```
+
+The legacy `SUPABASE_SERVICE_KEY` is still accepted as a backend fallback. Never place either service-role variable in a frontend env file.
+
+In the repository root `.env.local`, set the browser-safe Supabase values:
+
+```dotenv
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-or-publishable-key
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+The requested `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` names are also accepted by this Vite project. If port 8000 is occupied, set `VITE_API_BASE_URL=http://127.0.0.1:8001` in the ignored root `.env.development.local` file and start FastAPI on port 8001.
+
+Start FastAPI from `backend/` with `.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000`. The UI calls `/api/analyze/{course_id}` and `/api/chat` on that server.
+
 ### OpenRouter chat setup
 
-The `/chat` endpoint reads `backend/test.env` (shell environment variables take precedence). Set `OPENROUTER_API_KEY`, `OPENROUTER_MODEL=openai/gpt-4o`, and `CHAT_PROVIDER_ORDER=openrouter,openai` there. OpenRouter is tried first; candidates in `OPENROUTER_MODELS` are tried in order, followed by direct OpenAI if its key is configured. Keep the key on the backend only; never add it to frontend code or commit it.
+Backend integration settings use process environment variables first, then `backend/.env`, then `backend/test.env` as a fallback. The `/chat` endpoint uses `OPENROUTER_API_KEY`, `OPENROUTER_MODEL=openai/gpt-4o`, and `CHAT_PROVIDER_ORDER=openrouter,openai`. OpenRouter is tried first; candidates in `OPENROUTER_MODELS` are tried in order, followed by direct OpenAI if its key is configured. Keep provider keys on the backend only; never add them to frontend code or commit them. The browser Supabase client separately reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from the repository root `.env.local`.
 
 Verify a live chat request from `backend/` with:
 

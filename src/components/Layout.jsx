@@ -13,7 +13,7 @@ export default function Layout({ course, courses, onCourseChange, darkMode, setD
 
   return (
     <div className="app-shell flex min-h-screen bg-bg text-text">
-      <Sidebar setDarkMode={setDarkMode} isOpen={mobileNavOpen} onClose={closeMobileNav}>
+      <Sidebar darkMode={darkMode} setDarkMode={setDarkMode} isOpen={mobileNavOpen} onClose={closeMobileNav}>
         {(onNavigate) => <SidebarNav onNavigate={onNavigate} />}
       </Sidebar>
       <div className="flex min-w-0 flex-1 flex-col">

@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import chatHandler from './api/chat-handler.js'
 
 export default defineConfig({
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   plugins: [
     react(),
     {

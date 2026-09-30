@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from fastapi.testclient import TestClient
 
-from app import chat_api, chat_config, chat_providers, chat_service
+from app import chat_api, chat_config, chat_providers, chat_service, main, settings
 from app.chat_providers import ChatProviderError, ProviderReply
 from app.main import app
 
@@ -64,6 +65,23 @@ def test_placeholder_key_and_model_fallbacks(monkeypatch):
     assert chat_config.openai_model_candidates() == ["gpt-4o-mini", "gpt-4.1-mini"]
 
 
+def test_backend_env_precedence(monkeypatch, tmp_path):
+    monkeypatch.setenv("LOCAL_ENV_PRECEDENCE_TEST", "")
+    monkeypatch.setenv("LOCAL_ENV_PROCESS_TEST", "process-value")
+    (tmp_path / ".env").write_text(
+        "LOCAL_ENV_PRECEDENCE_TEST=primary-file\nLOCAL_ENV_PROCESS_TEST=file-value\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "test.env").write_text(
+        "LOCAL_ENV_PRECEDENCE_TEST=fallback-file\n", encoding="utf-8"
+    )
+
+    settings.load_backend_environment(tmp_path)
+
+    assert os.environ["LOCAL_ENV_PRECEDENCE_TEST"] == "primary-file"
+    assert os.environ["LOCAL_ENV_PROCESS_TEST"] == "process-value"
+
+
 def test_openrouter_config_and_model_candidates(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test-key")
     monkeypatch.setenv("OPENROUTER_MODELS", "openai/gpt-4o,openai/gpt-4o-mini")
@@ -118,6 +136,66 @@ def test_openrouter_chat_route(monkeypatch):
     assert response.status_code == 200
     assert response.json()["provider"] == "openrouter"
     assert response.json()["reply"] == "echo:hello"
+
+
+def test_persistent_course_chat_route(monkeypatch):
+    monkeypatch.setenv("TESTING", "true")
+    monkeypatch.setattr(
+        main,
+        "answer_course_chat",
+        lambda **kwargs: {
+            "session_id": kwargs["session_id"] or "session-test",
+            "reply": "grounded reply",
+            "provider": "openrouter",
+            "model": "openai/gpt-4o-mini",
+            "latencyMs": 1,
+            "sources": [],
+        },
+    )
+    response = _client().post(
+        "/api/chat",
+        headers={"X-Test-Role": "faculty", "X-Test-User-Id": "faculty-test"},
+        json={"session_id": None, "course_id": "course-test", "message": "hello"},
+    )
+    assert response.status_code == 200
+    assert response.json()["reply"] == "grounded reply"
+    assert response.json()["session_id"] == "session-test"
+
+
+def test_analysis_route_queues_owned_course(monkeypatch):
+    monkeypatch.setenv("TESTING", "true")
+
+    class Query:
+        def select(self, _columns):
+            return self
+
+        def eq(self, _column, _value):
+            return self
+
+        def limit(self, _count):
+            return self
+
+        def execute(self):
+            return type("Response", (), {"data": [{"course_id": "course-test", "faculty_id": "faculty-test"}]})()
+
+    class Client:
+        def table(self, _name):
+            return Query()
+
+    monkeypatch.setattr(main, "get_supabase_client", lambda: Client())
+    monkeypatch.setattr(main, "queue_analysis", lambda *_: {
+        "analysis_run_id": "run-test",
+        "course_id": "course-test",
+        "status": "queued",
+    })
+    monkeypatch.setattr(main, "run_analysis", lambda *_: None)
+    response = _client().post(
+        "/api/analyze/course-test",
+        headers={"X-Test-Role": "faculty", "X-Test-User-Id": "faculty-test"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "queued"
+    assert response.json()["analysis_run_id"] == "run-test"
 
 
 def test_openai_fails_returns_502(monkeypatch, caplog):

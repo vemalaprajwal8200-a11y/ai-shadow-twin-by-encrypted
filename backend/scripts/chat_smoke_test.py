@@ -5,11 +5,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-load_dotenv(BACKEND_DIR / "test.env", override=False)
 sys.path.insert(0, str(BACKEND_DIR))
 
 from app.chat_config import openai_api_key, openrouter_api_key  # noqa: E402

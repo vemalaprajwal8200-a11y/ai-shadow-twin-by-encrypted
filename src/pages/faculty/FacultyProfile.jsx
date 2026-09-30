@@ -3,6 +3,7 @@ import { Lock, LoaderCircle, UserCog } from 'lucide-react'
 import { Card, PageHeader } from '../../components/dashboard/DashboardPrimitives'
 import { Alert, Avatar, Badge, Button, Input, Toast } from '../../components/ui/Primitives'
 import { useAuth } from '../../auth/AuthContext'
+import { getMyProfile, updateProfile } from '../../data/supabaseData'
 
 function FacultyProfileSummary({ user }) {
   const name = user?.name || 'Faculty'
@@ -34,7 +35,11 @@ function FacultyProfileSummary({ user }) {
 }
 
 function FacultyProfileEditor({ user }) {
-  const { updateStudentDetails } = useAuth()
+  const { refreshUserProfile } = useAuth()
+  const [institution, setInstitution] = useState('')
+  const [savedInstitution, setSavedInstitution] = useState('')
+  const [department, setDepartment] = useState('')
+  const [savedDepartment, setSavedDepartment] = useState('')
   const [name, setName] = useState(user?.name || '')
   const [savedName, setSavedName] = useState(user?.name || '')
   const [saving, setSaving] = useState(false)
@@ -42,20 +47,34 @@ function FacultyProfileEditor({ user }) {
   const [toast, setToast] = useState('')
 
   useEffect(() => {
-    setName(user?.name || '')
-    setSavedName(user?.name || '')
+    let active = true
+    getMyProfile().then((profile) => {
+      if (!active) return
+      const profileName = profile.full_name || profile.display_name || user?.name || ''
+      setName(profileName)
+      setSavedName(profileName)
+      setInstitution(profile.institution || '')
+      setSavedInstitution(profile.institution || '')
+      setDepartment(profile.department || '')
+      setSavedDepartment(profile.department || '')
+    }).catch((error) => {
+      if (active) setError(error instanceof Error ? error.message : 'Could not load your profile.')
+    })
+    return () => { active = false }
   }, [user?.id, user?.name])
 
-  const hasChanges = name !== savedName
+  const hasChanges = name !== savedName || institution !== savedInstitution || department !== savedDepartment
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
     setSaving(true)
     try {
-      // Reuse updateStudentDetails — it updates the display_name in Supabase auth metadata
-      await updateStudentDetails({ name, studentId: user?.studentId || '', semester: '', section: '' })
+      await updateProfile({ full_name: name.trim(), display_name: name.trim(), institution: institution.trim(), department: department.trim() })
+      await refreshUserProfile()
       setSavedName(name)
+      setSavedInstitution(institution)
+      setSavedDepartment(department)
       setToast('Profile updated.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update your profile.')
@@ -80,6 +99,8 @@ function FacultyProfileEditor({ user }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+          <Input id="faculty-institution" label="Institution" value={institution} onChange={(event) => setInstitution(event.target.value)} />
+          <Input id="faculty-department" label="Department" value={department} onChange={(event) => setDepartment(event.target.value)} />
           <div className="space-y-1.5">
             <Input
               id="faculty-email"
@@ -97,7 +118,7 @@ function FacultyProfileEditor({ user }) {
           <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
             <Button
               variant="secondary"
-              onClick={() => { setName(savedName); setError('') }}
+              onClick={() => { setName(savedName); setInstitution(savedInstitution); setDepartment(savedDepartment); setError('') }}
               disabled={!hasChanges || saving}
             >
               Cancel

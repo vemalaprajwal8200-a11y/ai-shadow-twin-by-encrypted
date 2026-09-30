@@ -19,6 +19,9 @@ from mangum import Mangum
 from pydantic import BaseModel
 
 from app.chat_api import handle_chat_health, handle_post_chat
+from app.chat_data_service import answer_course_chat
+from app.analysis_service import queue_analysis, run_analysis
+from app.supabase_client import get_supabase_client
 from app.auth import (
     get_current_user,
     get_faculty_invite_code,
@@ -138,6 +141,57 @@ def ask_twin(request: TwinAskRequest):
             status_code=502,
             detail=f"Gemini configuration error: {exc}",
         ) from exc
+
+
+class CourseChatRequest(BaseModel):
+    session_id: str | None = None
+    course_id: str
+    message: str
+
+
+@app.post("/api/chat")
+def persistent_course_chat(
+    request: CourseChatRequest,
+    current_user: Any = Depends(get_current_user),
+):
+    try:
+        return answer_course_chat(
+            user_id=current_user["id"],
+            session_id=request.session_id,
+            course_id=request.course_id,
+            message=request.message,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Chat could not be completed.") from exc
+
+
+@app.post("/api/analyze/{course_id}")
+def start_supabase_analysis(
+    course_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: Any = Depends(require_faculty),
+):
+    user_id = current_user["id"]
+    try:
+        client = get_supabase_client()
+        courses = client.table("courses").select("course_id,faculty_id").eq("course_id", course_id).limit(1).execute().data or []
+        if not courses:
+            raise HTTPException(status_code=404, detail="Course not found.")
+        if courses[0].get("faculty_id") != user_id:
+            raise HTTPException(status_code=403, detail="You do not have access to this course.")
+        run = queue_analysis(course_id, user_id)
+        background_tasks.add_task(run_analysis, run["analysis_run_id"], course_id, user_id)
+        return run
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Analysis could not be queued.") from exc
 
 
 @app.post("/courses")

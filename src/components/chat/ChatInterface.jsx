@@ -6,6 +6,7 @@ import {
   createNewChatSession,
   deleteChatSession,
   getActiveChatId,
+  loadRemoteChatSessions,
   getStoredChats,
   renameChatSession,
   saveStoredChats,
@@ -56,21 +57,30 @@ export default function ChatInterface({
     setIsApiHealthy(await checkApiHealth())
   }
 
-  // Load chats on mount
   useEffect(() => {
-    const loadedChats = getStoredChats()
-    setChats(loadedChats)
-
-    const activeId = getActiveChatId()
-    let current = loadedChats.find((c) => c.id === activeId)
-    if (!current) {
-      current = createNewChatSession({ courseId, unitId, persona })
+    let active = true
+    const initializeChat = async () => {
+      let loadedChats = []
+      try {
+        loadedChats = await loadRemoteChatSessions(courseId)
+      } catch (loadError) {
+        if (active) setOfflineError(loadError instanceof Error ? `Could not load chat history: ${loadError.message}` : 'Could not load chat history.')
+      }
+      if (!active) return
+      setChats(loadedChats)
+      const activeId = getActiveChatId()
+      let current = loadedChats.find((chat) => chat.id === activeId || chat.sessionId === activeId)
+      if (!current) current = loadedChats[0]
+      if (!current) current = createNewChatSession({ courseId, unitId, persona })
+      setActiveChatId(current.id)
+      setActiveChat(current)
+      setPersona(current.persona || 'Beginner')
+      setUnitId(current.unitId || 'all')
       setChats(getStoredChats())
     }
-    setActiveChat(current)
-    setPersona(current.persona || 'Beginner')
-    setUnitId(current.unitId || 'all')
-  }, [])
+    void initializeChat()
+    return () => { active = false }
+  }, [courseId])
 
   useEffect(() => {
     refreshApiHealth()
@@ -205,11 +215,12 @@ export default function ChatInterface({
       unitId,
       persona,
       role: user?.role || 'student',
+      sessionId: activeChat.sessionId,
       signal: abortController.signal,
       onToken: (token) => {
         setStreamingContent((prev) => prev + token)
       },
-      onComplete: ({ text, itemCards, sources: replySources, isOffline, errorCode, warning }) => {
+      onComplete: ({ text, itemCards, sources: replySources, isOffline, errorCode, warning, sessionId }) => {
         setIsStreaming(false)
         setStreamingContent('')
         abortControllerRef.current = null
@@ -229,6 +240,10 @@ export default function ChatInterface({
         }
 
         updateCurrentChatMessages((currentMsgs) => [...currentMsgs, assistantMessage])
+        if (sessionId && sessionId !== activeChat.sessionId) {
+          const syncedChat = updateChatSession(activeChat.id, { sessionId })
+          if (syncedChat) setActiveChat(syncedChat)
+        }
 
         if (isOffline && warning) {
           setOfflineError(warning)

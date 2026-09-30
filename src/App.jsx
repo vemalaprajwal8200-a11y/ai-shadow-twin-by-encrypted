@@ -18,15 +18,25 @@ const MissedItems = lazy(() => import('./pages/student/MissedItems'))
 const StudyPlan = lazy(() => import('./pages/student/StudyPlan'))
 const StudentSettings = lazy(() => import('./pages/student/StudentSettings'))
 const StudentCourseContent = lazy(() => import('./pages/student/StudentCourseContent'))
-const SidebarSubtopicPage = lazy(() => import('./pages/SidebarSubtopicPage'))
+const SidebarSubtopicPage = lazy(() => import('./pages/ConnectedSidebarSubtopicPage'))
 const FacultyProfile = lazy(() => import('./pages/faculty/FacultyProfile'))
 import { sidebarNavSubtopics } from './components/sidebarNavConfig'
-import { mockCourses } from './data/mockData'
+import { getCourseOverview, getUserSettings } from './data/supabaseData'
 import { useAuth } from './auth/AuthContext'
 
 function NotFoundRedirect() {
   useEffect(() => {
     window.location.replace('/404.html')
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    getUserSettings().then((settings) => {
+      if (active && (settings.theme === 'light' || settings.theme === 'dark')) {
+        setDarkMode(settings.theme === 'dark')
+      }
+    }).catch(() => {})
+    return () => { active = false }
   }, [])
 
   return null
@@ -45,7 +55,31 @@ function SharedCourseTopic({ topic, courseId }) {
 
 function AppRoutes() {
   const [darkMode, setDarkMode] = useDarkMode()
-  const [courseId, setCourseId] = useState(mockCourses[0].id)
+  const [courseId, setCourseId] = useState('')
+  const [courses, setCourses] = useState([])
+
+  useEffect(() => {
+    let active = true
+    getCourseOverview()
+      .then((rows) => {
+        if (!active) return
+        const mapped = rows.map((row) => ({
+          ...row,
+          id: row.course_id || row.id,
+          title: row.course_name || row.title || row.name || 'Untitled course',
+          code: row.course_code || row.code || '',
+        }))
+        setCourses(mapped)
+        setCourseId((current) => mapped.some((course) => course.id === current) ? current : mapped[0]?.id || '')
+      })
+      .catch(() => {
+        if (active) {
+          setCourses([])
+          setCourseId('')
+        }
+      })
+    return () => { active = false }
+  }, [])
 
   return (
     <Suspense fallback={<div className="grid min-h-screen place-items-center text-muted">Loading…</div>}>
@@ -57,7 +91,7 @@ function AppRoutes() {
           <ProtectedRoute>
               <Layout
                 course={courseId}
-                courses={mockCourses}
+                courses={courses}
                 onCourseChange={setCourseId}
                 darkMode={darkMode}
                 setDarkMode={setDarkMode}
@@ -79,13 +113,13 @@ function AppRoutes() {
 
         <Route element={<RoleRoute allowedRoles={['faculty']} />}>
           <Route path="faculty/dashboard" element={<DashboardHome courseId={courseId} />} />
-          <Route path="courses" element={<CoursesPage courseId={courseId} />} />
+          <Route path="courses" element={<CoursesPage courseId={courseId} onCourseChange={setCourseId} />} />
           <Route path="content" element={<CourseContentPage courseId={courseId} />} />
-          <Route path="report" element={<QualityReportPage />} />
+          <Route path="report" element={<QualityReportPage courseId={courseId} />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="faculty/profile" element={<FacultyProfile />} />
           {sidebarNavSubtopics.filter((topic) => topic.kind !== 'student-details' && topic.kind !== 'content' && topic.kind !== 'faculty-profile').map((topic) => (
-            <Route key={topic.id} path={topic.to.replace(/^\//, '')} element={<SidebarSubtopicPage topic={topic} courseId={courseId} />} />
+            <Route key={topic.id} path={topic.to.replace(/^\//, '')} element={<SidebarSubtopicPage topic={topic} courseId={courseId} onCourseChange={setCourseId} />} />
           ))}
         </Route>
 

@@ -11,15 +11,18 @@ import httpx
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.settings import load_backend_environment
+from app.supabase_client import supabase_service_role_key, supabase_url
+
+load_backend_environment()
+
 # Security scheme for Swagger UI & header extraction
 security = HTTPBearer(auto_error=False)
 
 
 def get_supabase_config() -> tuple[str, str]:
     """Retrieve Supabase URL and Service Key from environment without logging secrets."""
-    url = os.getenv("SUPABASE_URL", "").rstrip("/")
-    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
-    return url, service_key
+    return supabase_url(), supabase_service_role_key()
 
 
 def get_faculty_invite_code() -> str:

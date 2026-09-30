@@ -2,9 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { getSupabaseClient, isSupabaseConfigured } from '../api/supabase'
 
 const AuthContext = createContext(null)
-const EMAIL_CONFIRMATION_URL = 'https://ai-shadow-twin-by-encrypted.vercel.app/login'
-const PASSWORD_RECOVERY_URL = 'https://ai-shadow-twin-by-encrypted.vercel.app/login?recovery=complete'
-
 /**
  * Returns the canonical dashboard path for a given role.
  * @param {'student' | 'faculty' | string | undefined} role
@@ -25,7 +22,7 @@ async function getProfileUser(client, authUser) {
   try {
     const { data, error } = await client
       .from('profiles')
-      .select('display_name, role, student_id, course_id, semester, section')
+      .select('*')
       .eq('user_id', authUser.id)
       .maybeSingle()
     if (!error && data) {
@@ -40,7 +37,7 @@ async function getProfileUser(client, authUser) {
     try {
       const { data, error } = await client
         .from('profiles')
-        .select('display_name, role, student_id, course_id, semester, section')
+        .select('*')
         .eq('id', authUser.id)
         .maybeSingle()
       if (!error && data) {
@@ -55,7 +52,7 @@ async function getProfileUser(client, authUser) {
 
   // Keep the profile row authoritative for role and basic identity, but do not keep stale values
   // when the auth user metadata was updated more recently by the client.
-  const normalizedDisplayName = profileData?.display_name?.trim() || metadata.display_name?.trim() || authUser.email?.split('@')[0] || 'User'
+  const normalizedDisplayName = profileData?.full_name?.trim() || profileData?.display_name?.trim() || metadata.full_name?.trim() || metadata.display_name?.trim() || authUser.email?.split('@')[0] || 'User'
   const normalizedStudentId = (metadata.student_id ?? profileData?.student_id ?? '').toString().trim() || undefined
 
   let verifiedRole = 'student'
@@ -63,8 +60,6 @@ async function getProfileUser(client, authUser) {
     verifiedRole = 'faculty'
   } else if (profileData?.role === 'student') {
     verifiedRole = 'student'
-  } else if (metadata.role === 'faculty' || metadata.requested_role === 'faculty') {
-    verifiedRole = 'faculty'
   }
 
   return {
@@ -160,8 +155,9 @@ export function AuthProvider({ children }) {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: EMAIL_CONFIRMATION_URL,
+          emailRedirectTo: `${window.location.origin}/login`,
           data: {
+            full_name: displayName.trim(),
             display_name: displayName.trim(),
             student_id: studentId.trim(),
             role: targetRole,
@@ -196,10 +192,19 @@ export function AuthProvider({ children }) {
       setUser(profileUser)
       return profileUser
     },
+    async refreshUserProfile() {
+      const client = getSupabaseClient()
+      const { data, error } = await client.auth.getUser()
+      if (error) throw error
+      if (!data.user) throw new Error('Sign in to continue.')
+      const profileUser = await getProfileUser(client, data.user)
+      setUser(profileUser)
+      return profileUser
+    },
     async sendPasswordReset(email) {
       const client = getSupabaseClient()
       const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: PASSWORD_RECOVERY_URL,
+        redirectTo: `${window.location.origin}/login?recovery=complete`,
       })
       if (error) throw error
     },
@@ -232,20 +237,18 @@ export function AuthProvider({ children }) {
       if (!data.user) throw new Error('Could not update your student details.')
 
       try {
-        const profileRow = {
-          user_id: data.user.id,
-          id: data.user.id,
+        const profileFields = {
+          full_name: cleanedName,
           display_name: cleanedName,
           student_id: cleanedStudentId,
-          course_id: user?.courseId || null,
-          role: user?.role || 'student',
-          semester: cleanedSemester,
-          section: cleanedSection,
         }
 
-        const { error: profileError } = await client
-          .from('profiles')
-          .upsert(profileRow, { onConflict: 'user_id' })
+        let { error: profileError } = await client.from('profiles')
+          .update(profileFields).eq('user_id', data.user.id)
+        if (profileError?.code === '42703' || profileError?.code === 'PGRST204') {
+          const fallback = await client.from('profiles').update(profileFields).eq('id', data.user.id)
+          profileError = fallback.error
+        }
 
         if (profileError) {
           console.warn('Profile sync warning:', profileError.message)

@@ -7,11 +7,17 @@ const chipClasses = {
     'Content defect': 'bg-danger/10 text-danger',
     'Ability gap': 'bg-ability-gap/10 text-ink ring-1 ring-ability-gap/35',
     Clean: 'bg-primary/10 text-primary',
+    clear: 'bg-primary/10 text-primary',
+    ambiguous: 'bg-ambiguous/15 text-ink',
+    flawed: 'bg-danger/10 text-danger',
   },
   severity: {
     High: 'bg-danger/10 text-danger',
     Medium: 'bg-ambiguous/15 text-ink',
     Low: 'bg-page text-muted',
+    high: 'bg-danger/10 text-danger',
+    medium: 'bg-ambiguous/15 text-ink',
+    low: 'bg-page text-muted',
   },
   status: {
     Confirmed: 'bg-primary/10 text-primary',
@@ -20,8 +26,8 @@ const chipClasses = {
 }
 
 const chipTones = {
-  verdict: { 'Content defect': 'danger', 'Ability gap': 'info', Clean: 'success' },
-  severity: { High: 'danger', Medium: 'warning', Low: 'neutral' },
+  verdict: { 'Content defect': 'danger', 'Ability gap': 'info', Clean: 'success', clear: 'success', ambiguous: 'warning', flawed: 'danger' },
+  severity: { High: 'danger', Medium: 'warning', Low: 'neutral', high: 'danger', medium: 'warning', low: 'neutral' },
   status: { Confirmed: 'success', Dismissed: 'neutral' },
 }
 

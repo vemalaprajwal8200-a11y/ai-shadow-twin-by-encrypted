@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
-from dotenv import load_dotenv
+from app.settings import load_backend_environment
 
-_BACKEND_DIR = Path(__file__).resolve().parents[1]
-load_dotenv(_BACKEND_DIR / "test.env", override=False)
+load_backend_environment()
 
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 DEFAULT_OPENROUTER_MODEL = "openai/gpt-4o"
-DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest"
 DEFAULT_PROVIDER_ORDER = "openrouter,openai"
 DEFAULT_SYSTEM_PROMPT = (
     "You are a professional assistant for the AI Shadow-Twin app. "

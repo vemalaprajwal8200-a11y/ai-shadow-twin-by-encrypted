@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, ChevronDown, Copy, MessageSquareText, ShieldAlert, ShieldCheck, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronDown, Copy, ShieldAlert, ShieldCheck, XCircle } from 'lucide-react'
 import { useParams } from 'react-router-dom'
-import mockApi from '../api/mock'
 import { PageHeader, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
+import { getContentItem, getItemResults, updateFlagReview } from '../data/supabaseData'
 
 export default function ItemDetailPage() {
   const { itemId } = useParams()
@@ -10,17 +10,45 @@ export default function ItemDetailPage() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState({})
   const [feedbackComment, setFeedbackComment] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     let active = true
     const fetchItem = async () => {
       setLoading(true)
+      setError('')
       try {
-        const result = await mockApi.getItemById(itemId)
+        const [row, results] = await Promise.all([getContentItem(itemId), getItemResults(itemId)])
+        const flags = Array.isArray(row?.flags) ? row.flags : []
+        const result = row ? {
+          ...row,
+          id: row.content_item_id,
+          title: row.title || row.item_title || 'Course item',
+          verdict: row.verdict || 'clear',
+          severity: flags[0]?.severity || 'low',
+          confidence: row.confidence == null ? null : Math.round(Number(row.confidence) * (Number(row.confidence) <= 1 ? 100 : 1)),
+          content: row.content_text || '',
+          originalText: row.content_text || '',
+          reasons: flags.map((flag) => flag.review_note || flag.severity).filter(Boolean).concat(row.reason ? [row.reason] : []),
+          twinAttempts: results.map((entry) => ({
+            persona: entry.personas?.name || 'Twin',
+            answer: entry.answer,
+            reasoning: entry.reasoning,
+            confidence: Math.round(Number(entry.confidence || 0) * 100),
+            agreement: 'Stored analysis result',
+          })),
+          context: 'Course context is supplied to the Twin from previously analyzed items.',
+          suggestedRewrite: row.suggested_rewrite || 'No suggested rewrite is available for this item yet.',
+          flags,
+          facultyFeedback: { status: flags[0]?.status || 'open', comment: flags[0]?.review_note || '' },
+        } : null
         if (active) {
           setItem(result)
           setFeedbackComment(result?.facultyFeedback?.comment || '')
         }
+      } catch (loadError) {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'Could not load this item.')
       } finally {
         if (active) setLoading(false)
       }
@@ -33,18 +61,28 @@ export default function ItemDetailPage() {
   }, [itemId])
 
   const handleDecision = async (status) => {
-    if (!item) return
-    await mockApi.updateFacultyDecision(item.id, {
-      status,
-      comment: feedbackComment,
-    })
-    setItem((current) => ({
-      ...current,
-      facultyFeedback: { status, comment: feedbackComment, confirmed: status === 'Confirmed' },
-    }))
+    if (!item?.flags?.[0]?.flag_id) {
+      setError('This item has no flag to review.')
+      return
+    }
+    setSaving(true)
+    setError('')
+    const nextStatus = status === 'Fixed' ? 'resolved' : status.toLowerCase()
+    try {
+      const updated = await updateFlagReview(item.flags[0].flag_id, nextStatus, feedbackComment)
+      setItem((current) => ({
+        ...current,
+        flags: [{ ...current.flags[0], ...updated }],
+        facultyFeedback: { status: nextStatus, comment: feedbackComment },
+      }))
+    } catch (reviewError) {
+      setError(reviewError instanceof Error ? reviewError.message : 'Could not save the review.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  if (loading || !item) {
+  if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
         <div className="h-24 rounded-2xl bg-border/30" />
@@ -52,6 +90,8 @@ export default function ItemDetailPage() {
       </div>
     )
   }
+
+  if (error || !item) return <div className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger"><p>{error || 'Course item not found.'}</p></div>
 
   return (
     <div className="space-y-6">
@@ -67,7 +107,7 @@ export default function ItemDetailPage() {
           <div className="card p-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-heading">Original material</h3>
-              <div className="text-sm text-muted">Confidence {item.confidence}%</div>
+              <div className="text-sm text-muted">Confidence {item.confidence == null ? '—' : `${item.confidence}%`}</div>
             </div>
             <div className="rounded-2xl border border-border bg-bg p-4 text-text">
               {item.originalText || item.content}
@@ -147,10 +187,10 @@ export default function ItemDetailPage() {
               <button className="inline-flex items-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-primary">
                 <Copy className="h-4 w-4" /> Copy
               </button>
-              <button onClick={() => handleDecision('Fixed')} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-fg">
+              <button disabled={saving} onClick={() => handleDecision('Fixed')} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-fg disabled:opacity-50">
                 <CheckCircle2 className="h-4 w-4" /> Accept
               </button>
-              <button onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl bg-surface-tint px-3 py-2 text-sm font-medium text-primary">
+              <button disabled={saving} onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl bg-surface-tint px-3 py-2 text-sm font-medium text-primary disabled:opacity-50">
                 <XCircle className="h-4 w-4" /> Dismiss
               </button>
             </div>
@@ -159,10 +199,10 @@ export default function ItemDetailPage() {
           <div className="card p-5">
             <h3 className="mb-4 text-lg font-semibold text-heading">Faculty feedback</h3>
             <div className="flex gap-2">
-              <button onClick={() => handleDecision('Confirmed')} className="inline-flex items-center gap-2 rounded-xl bg-danger px-3 py-2 text-sm font-medium text-primary-fg">
+              <button disabled={saving} onClick={() => handleDecision('Confirmed')} className="inline-flex items-center gap-2 rounded-xl bg-danger px-3 py-2 text-sm font-medium text-primary-fg disabled:opacity-50">
                 <ShieldAlert className="h-4 w-4" /> Confirm defect
               </button>
-              <button onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-primary">
+              <button disabled={saving} onClick={() => handleDecision('Dismissed')} className="inline-flex items-center gap-2 rounded-xl border border-surface-tint bg-surface-tint px-3 py-2 text-sm font-medium text-primary disabled:opacity-50">
                 <ShieldCheck className="h-4 w-4" /> Not a defect
               </button>
             </div>

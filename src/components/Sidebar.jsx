@@ -1,9 +1,15 @@
-import { SunMoon, X } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { LogOut, SunMoon, X } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { saveUserSettings } from '../data/supabaseData'
 
-function SidebarPanel({ user, setDarkMode, children, onNavigate, onClose, mobile = false }) {
+function SidebarPanel({ user, darkMode, setDarkMode, onLogout, children, onNavigate, onClose, mobile = false }) {
   const nav = typeof children === 'function' ? children(onNavigate) : children
+  const toggleTheme = () => {
+    const nextDarkMode = !darkMode
+    setDarkMode(nextDarkMode)
+    saveUserSettings({ theme: nextDarkMode ? 'dark' : 'light' }).catch(() => {})
+  }
 
   return (
     <div className="flex h-full flex-col bg-sidebar px-4 py-5 text-sidebar-fg">
@@ -15,7 +21,7 @@ function SidebarPanel({ user, setDarkMode, children, onNavigate, onClose, mobile
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => setDarkMode((value) => !value)}
+            onClick={toggleTheme}
             className="grid h-9 w-9 place-items-center rounded-lg text-sidebar-fg/75 transition-colors hover:bg-white/10 hover:text-white"
             aria-label="Toggle theme"
           >
@@ -36,25 +42,37 @@ function SidebarPanel({ user, setDarkMode, children, onNavigate, onClose, mobile
         </div>
         <p className="mt-2 text-xs text-sidebar-fg/65">Ready for analysis</p>
       </div>
-      <p className="mt-4 truncate px-2 text-xs text-sidebar-fg/55">{user?.name}</p>
+      <div className="mt-4 border-t border-white/10 pt-3">
+        <p className="truncate px-2 text-sm font-medium text-white">{user?.name || 'Faculty member'}</p>
+        <p className="mt-0.5 truncate px-2 text-xs text-sidebar-fg/55">{user?.email}</p>
+        <button type="button" onClick={onLogout} className="mt-2 flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-xs font-medium text-sidebar-fg/75 transition hover:bg-white/10 hover:text-white">
+          <LogOut aria-hidden="true" className="h-4 w-4" />
+          Log out
+        </button>
+      </div>
     </div>
   )
 }
 
 /** @param {{ setDarkMode: (updater: (value: boolean) => boolean) => void, children: import('react').ReactNode, isOpen: boolean, onClose: () => void }} props */
-export default function Sidebar({ setDarkMode, children, isOpen, onClose }) {
-  const { user } = useAuth()
+export default function Sidebar({ darkMode, setDarkMode, children, isOpen, onClose }) {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const onNavigate = () => onClose()
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <>
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-white/10 bg-sidebar lg:block">
-        <SidebarPanel user={user} setDarkMode={setDarkMode} onNavigate={() => {}} onClose={() => {}}>{children}</SidebarPanel>
+        <SidebarPanel user={user} darkMode={darkMode} setDarkMode={setDarkMode} onLogout={handleLogout} onNavigate={() => {}} onClose={() => {}}>{children}</SidebarPanel>
       </aside>
       <div className={`fixed inset-0 z-50 lg:hidden ${isOpen ? 'visible' : 'invisible pointer-events-none'}`} aria-hidden={!isOpen}>
         <button type="button" tabIndex={isOpen ? 0 : -1} onClick={onClose} className={`absolute inset-0 bg-ink/40 transition-opacity duration-150 ${isOpen ? 'opacity-100' : 'opacity-0'}`} aria-label="Close navigation menu" />
         <aside className={`absolute inset-y-0 left-0 w-[min(19rem,88vw)] border-r border-white/10 bg-sidebar shadow-soft transition-transform duration-150 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <SidebarPanel user={user} setDarkMode={setDarkMode} onNavigate={onNavigate} onClose={onClose} mobile>{children}</SidebarPanel>
+          <SidebarPanel user={user} darkMode={darkMode} setDarkMode={setDarkMode} onLogout={handleLogout} onNavigate={onNavigate} onClose={onClose} mobile>{children}</SidebarPanel>
         </aside>
       </div>
     </>

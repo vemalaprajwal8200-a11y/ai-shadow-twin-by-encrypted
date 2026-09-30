@@ -50,8 +50,8 @@ export default function TopBar({ course, courses, onCourseChange, onMenuClick })
         ) : <>
           <div className="relative flex min-w-0 items-center">
             <label htmlFor="active-course" className="sr-only">Current course</label>
-            <select id="active-course" value={course} onChange={(event) => onCourseChange(event.target.value)} className="ui-input min-h-9 w-[34vw] min-w-24 max-w-44 appearance-none truncate pr-8 text-xs font-medium sm:min-h-10 sm:text-sm">
-              {courses.map((option) => <option key={option.id} value={option.id}>{option.title}</option>)}
+            <select id="active-course" value={course || ''} disabled={courses.length === 0} onChange={(event) => onCourseChange(event.target.value)} className="ui-input min-h-9 w-[34vw] min-w-24 max-w-44 appearance-none truncate pr-8 text-xs font-medium sm:min-h-10 sm:text-sm disabled:opacity-60">
+              {courses.length === 0 ? <option value="">No courses yet</option> : courses.map((option) => <option key={option.id} value={option.id}>{option.title}</option>)}
             </select>
             <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           </div>

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import ChatInterface from '../components/chat/ChatInterface'
 import TwinContextCard from '../components/chat/TwinContextCard'
 import {
   deleteChatSession,
   getActiveChatId,
   getStoredChats,
+  loadRemoteChatSessions,
   renameChatSession,
   setActiveChatId,
 } from '../services/chat'
@@ -18,6 +19,23 @@ export default function ChatPage({ courseId, onCourseChange }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [chats, setChats] = useState(() => getStoredChats())
   const [activeChatId, setActiveId] = useState(() => getActiveChatId())
+
+  useEffect(() => {
+    let active = true
+    loadRemoteChatSessions(courseId).then((remoteChats) => {
+      if (!active) return
+      setChats(remoteChats)
+      const storedId = getActiveChatId()
+      const currentId = remoteChats.some((chat) => chat.id === storedId || chat.sessionId === storedId)
+        ? storedId
+        : remoteChats[0]?.id || null
+      setActiveChatId(currentId)
+      setActiveId(currentId)
+    }).catch(() => {
+      if (active) setChats([])
+    })
+    return () => { active = false }
+  }, [courseId])
 
   const reloadChats = () => {
     setChats(getStoredChats())

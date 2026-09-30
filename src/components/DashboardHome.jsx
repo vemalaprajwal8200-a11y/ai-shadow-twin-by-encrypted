@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { Toast } from './ui/Primitives'
 
-const FacultyDashboard = lazy(() => import('../pages/faculty/FacultyDashboard'))
+const FacultyDashboard = lazy(() => import('../pages/faculty/ConnectedFacultyDashboard'))
 const MyDetails = lazy(() => import('../pages/student/MyDetails'))
 
 /** @param {{ courseId: string }} props */

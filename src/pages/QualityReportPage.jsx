@@ -1,27 +1,43 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Download, Filter, TrendingUp } from 'lucide-react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import mockApi from '../api/mock'
+import { getAccuracyMetrics, getDefectRatePerUnit, getFlagReview, recordReportExport, updateFlagReview } from '../data/supabaseData'
 import { PageHeader, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
 import { Button, Select } from '../components/ui/Primitives'
 import { chartPalette } from '../data/chartPalette'
 import { useThemeMode } from '../hooks/useThemeMode'
 
-export default function QualityReportPage() {
+export default function QualityReportPage({ courseId }) {
   const darkMode = useThemeMode()
   const palette = chartPalette[darkMode ? 'dark' : 'light']
   const [rows, setRows] = useState([])
+  const [metrics, setMetrics] = useState(null)
+  const [defectRows, setDefectRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [unitFilter, setUnitFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [error, setError] = useState('')
+  const [savingFlag, setSavingFlag] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let active = true
     const fetchRows = async () => {
       setLoading(true)
+      setError('')
       try {
-        const response = await mockApi.getReportData()
-        if (active) setRows(response)
+        const [accuracy, defects, review] = await Promise.all([
+          getAccuracyMetrics(courseId),
+          getDefectRatePerUnit(courseId),
+          getFlagReview(courseId),
+        ])
+        if (active) {
+          setMetrics(accuracy[0] || null)
+          setDefectRows(defects)
+          setRows(review)
+        }
+      } catch (loadError) {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'Could not load quality report.')
       } finally {
         if (active) setLoading(false)
       }
@@ -31,33 +47,58 @@ export default function QualityReportPage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [courseId, retryKey])
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
-      const matchesUnit = unitFilter === 'All' || row.unit === unitFilter
-      const matchesStatus = statusFilter === 'All' || row.status === statusFilter
+      const matchesUnit = unitFilter === 'All' || String(row.unit_name || row.unit_order || row.unit) === unitFilter
+      const matchesStatus = statusFilter === 'All' || String(row.status || '').toLowerCase() === statusFilter.toLowerCase()
       return matchesUnit && matchesStatus
     })
   }, [rows, unitFilter, statusFilter])
 
-  const exportCsv = () => {
-    const headers = ['item', 'unit', 'verdict', 'severity', 'agreement', 'status']
-    const csv = [headers.join(',')]
-      .concat(
-        filteredRows.map((row) =>
-          [row.item, row.unit, row.verdict, row.severity, row.agreement, row.status].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','),
-        ),
-      )
-      .join('\n')
+  const exportCsv = async () => {
+    setError('')
+    try {
+      const headers = ['course_id', 'unit', 'item', 'item_type', 'verdict', 'confidence', 'status', 'review_note', 'reviewed_at']
+      const rowsForCsv = filteredRows.map((row) => [
+        row.course_id,
+        row.unit_name || row.unit_order,
+        row.title || row.item_title || row.content_item_id,
+        row.item_type,
+        row.verdict,
+        row.confidence,
+        row.status,
+        row.review_note,
+        row.reviewed_at,
+      ])
+      const csv = [headers, ...rowsForCsv].map((row) => row.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+      const fileName = `shadow-twin-report-${new Date().toISOString().slice(0, 10)}.csv`
+      await recordReportExport({ courseId, fileName, rowCount: filteredRows.length })
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (exportError) {
+      setError(exportError instanceof Error ? exportError.message : 'Could not export report.')
+    }
+  }
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'shadow-twin-report.csv'
-    link.click()
-    URL.revokeObjectURL(url)
+  const reviewFlag = async (row, status) => {
+    const flagId = row.flag_id || row.id
+    if (!flagId) return
+    setSavingFlag(flagId)
+    setError('')
+    try {
+      const updated = await updateFlagReview(flagId, status)
+      setRows((current) => current.map((entry) => (entry.flag_id || entry.id) === flagId ? { ...entry, ...updated } : entry))
+    } catch (reviewError) {
+      setError(reviewError instanceof Error ? reviewError.message : 'Could not update flag review.')
+    } finally {
+      setSavingFlag('')
+    }
   }
 
   if (loading) {
@@ -70,36 +111,35 @@ export default function QualityReportPage() {
     )
   }
 
-  const chartData = [
-    { name: 'Unit 1', rate: 38 },
-    { name: 'Unit 2', rate: 29 },
-    { name: 'Unit 3', rate: 21 },
-  ]
-
-  const timeSeries = [
-    { month: 'Jul', confirmed: 4, dismissed: 2 },
-    { month: 'Aug', confirmed: 6, dismissed: 3 },
-    { month: 'Sep', confirmed: 8, dismissed: 5 },
-  ]
+  const chartData = defectRows.map((row) => ({
+    name: row.unit_name || `Unit ${row.unit_order || ''}`,
+    rate: Number(row.defect_rate_pct ?? row.defect_rate ?? 0),
+  }))
+  const timeSeries = ['confirmed', 'dismissed', 'resolved'].map((status) => ({
+    month: status,
+    confirmed: status === 'confirmed' ? filteredRows.filter((row) => String(row.status).toLowerCase() === status).length : 0,
+    dismissed: status === 'dismissed' ? filteredRows.filter((row) => String(row.status).toLowerCase() === status).length : 0,
+  }))
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Reporting" title="Content quality report" description="Review verdict accuracy and tracked content issues." actions={<Button onClick={exportCsv} size="sm">
+        <PageHeader eyebrow="Reporting" title="Content quality report" description="Review verdict accuracy and tracked content issues." actions={<Button onClick={exportCsv} size="sm" disabled={filteredRows.length === 0}>
           <Download className="h-4 w-4" /> CSV export
       </Button>} />
+        {error && <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger"><p>{error}</p><button type="button" onClick={() => setRetryKey((value) => value + 1)} className="mt-2 font-semibold underline">Retry</button></div>}
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="card p-4">
-          <p className="text-sm text-muted">Known-bad items flagged</p>
-          <p className="mt-2 text-3xl font-bold text-primary">87%</p>
+          <p className="text-sm text-muted">Flag reviews</p>
+          <p className="mt-2 text-3xl font-bold text-primary">{metrics?.reviewed_count ?? 0}</p>
         </div>
         <div className="card p-4">
-          <p className="text-sm text-muted">Label accuracy</p>
-          <p className="mt-2 text-3xl font-bold text-primary">94%</p>
+          <p className="text-sm text-muted">Flag confirmation rate</p>
+          <p className="mt-2 text-3xl font-bold text-primary">{metrics?.confirmed_pct == null ? '—' : `${metrics.confirmed_pct}%`}</p>
         </div>
         <div className="card p-4">
-          <p className="text-sm text-muted">Flags confirmed</p>
-          <p className="mt-2 text-3xl font-bold text-primary">44%</p>
+          <p className="text-sm text-muted">Model label accuracy</p>
+          <p className="mt-2 text-3xl font-bold text-primary">{metrics?.accuracy_pct == null ? 'Not measured' : `${metrics.accuracy_pct}%`}</p>
         </div>
       </div>
 
@@ -142,16 +182,14 @@ export default function QualityReportPage() {
         <div className="mb-4 flex gap-3">
           <Select aria-label="Filter by unit" value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
             <option>All</option>
-            <option>Unit 1</option>
-            <option>Unit 2</option>
-            <option>Unit 3</option>
+            {Array.from(new Set(rows.map((row) => row.unit_name || row.unit_order).filter(Boolean))).map((unit) => <option key={unit}>{unit}</option>)}
           </Select>
           <Select aria-label="Filter by status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option>All</option>
             <option>Open</option>
             <option>Confirmed</option>
             <option>Dismissed</option>
-            <option>Fixed</option>
+            <option>Resolved</option>
           </Select>
         </div>
 
@@ -168,24 +206,19 @@ export default function QualityReportPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => (
-                <tr key={row.id} className="border-b border-border/60">
-                  <td className="py-3 pr-3 font-medium text-text">{row.item}</td>
-                  <td className="py-3 pr-3">{row.unit}</td>
-                  <td className="py-3 pr-3">
-                    <VerdictChip verdict={row.verdict} />
-                  </td>
-                  <td className="py-3 pr-3">
-                    <SeverityChip severity={row.severity} />
-                  </td>
-                  <td className="py-3 pr-3">{row.agreement}%</td>
-                  <td className="py-3 pr-3">
-                    <span className="rounded-full bg-surface px-2 py-1 text-xs font-medium text-muted">
-                      {row.status}
-                    </span>
-                  </td>
+              {filteredRows.map((row) => {
+                const flagId = row.flag_id || row.id
+                const status = String(row.status || 'open').toLowerCase()
+                return <tr key={flagId} className="border-b border-border/60">
+                  <td className="py-3 pr-3 font-medium text-text">{row.title || row.item_title || row.content_item_id}</td>
+                  <td className="py-3 pr-3">{row.unit_name || row.unit_order || '—'}</td>
+                  <td className="py-3 pr-3"><VerdictChip verdict={row.verdict || 'Unknown'} /></td>
+                  <td className="py-3 pr-3"><SeverityChip severity={row.severity || 'Low'} /></td>
+                  <td className="py-3 pr-3">{row.confidence == null ? '—' : `${Math.round(Number(row.confidence) * (Number(row.confidence) <= 1 ? 100 : 1))}%`}</td>
+                  <td className="py-3 pr-3"><div className="flex flex-wrap items-center gap-2"><span className="capitalize">{status}</span>{['confirmed', 'dismissed', 'resolved'].map((action) => <button key={action} type="button" disabled={savingFlag === flagId || status === action} onClick={() => reviewFlag(row, action)} className="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-40">{action === 'resolved' ? 'Resolve' : action[0].toUpperCase() + action.slice(1)}</button>)}</div></td>
                 </tr>
-              ))}
+              })}
+              {filteredRows.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-muted">No flags match this report.</td></tr>}
             </tbody>
           </table>
         </div>

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Filter, Search, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import mockApi from '../api/mock'
+import { getContentItems } from '../data/supabaseData'
 import { PageHeader, SeverityChip, VerdictChip } from '../components/dashboard/DashboardPrimitives'
 import { Badge, Input, Select } from '../components/ui/Primitives'
 
-const verdictOptions = ['All', 'Content defect', 'Ability gap', 'Clean']
+const verdictOptions = ['All', 'clear', 'ambiguous', 'flawed']
 const severityOptions = ['All', 'High', 'Medium', 'Low']
 
 export default function CourseContentPage({ courseId }) {
@@ -16,14 +16,35 @@ export default function CourseContentPage({ courseId }) {
   const [verdictFilter, setVerdictFilter] = useState('All')
   const [severityFilter, setSeverityFilter] = useState('All')
   const [unitFilter, setUnitFilter] = useState('All')
+  const [error, setError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let active = true
     const fetchItems = async () => {
       setLoading(true)
+      setError('')
       try {
-        const result = await mockApi.getCourseItems(courseId)
-        if (active) setItems(result)
+        const result = await getContentItems(courseId, {
+          itemType: typeFilter === 'slide' || typeFilter === 'question' ? typeFilter : undefined,
+          flaggedOnly: typeFilter === 'flagged',
+        })
+        if (active) setItems(result.map((row) => ({
+          ...row,
+          id: row.content_item_id || row.item_id || row.id,
+          type: row.item_type || row.type || 'slide',
+          unit: row.unit_name || row.unit_order || row.unit_number || '',
+          title: row.title || row.item_title || row.file_name || 'Course item',
+          content: row.content_text || row.content || row.text || '',
+          section: row.section || row.unit_name || '',
+          verdict: row.verdict || 'clear',
+          severity: row.severity || row.flags?.[0]?.severity || 'Low',
+          confidence: row.confidence ?? row.verdict_confidence ?? null,
+          flags: Array.isArray(row.flags) ? row.flags : [],
+          is_flagged: Boolean(row.is_flagged),
+        })))
+      } catch (loadError) {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'Could not load course content.')
       } finally {
         if (active) setLoading(false)
       }
@@ -33,12 +54,12 @@ export default function CourseContentPage({ courseId }) {
     return () => {
       active = false
     }
-  }, [courseId])
+  }, [courseId, typeFilter, retryKey])
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       const matchesSearch = search ? `${item.title} ${item.content}`.toLowerCase().includes(search.toLowerCase()) : true
-      const matchesType = typeFilter === 'All' || item.type === typeFilter
+      const matchesType = typeFilter === 'All' || typeFilter === 'flagged' || item.type === typeFilter
       const matchesVerdict = verdictFilter === 'All' || item.verdict === verdictFilter
       const matchesSeverity = severityFilter === 'All' || item.severity === severityFilter
       const matchesUnit = unitFilter === 'All' || String(item.unit) === unitFilter
@@ -61,6 +82,7 @@ export default function CourseContentPage({ courseId }) {
   return (
     <div className="space-y-5">
       <PageHeader eyebrow="Content review" title="Course content" description="Search and filter course materials by type and review status." actions={<Badge>{filteredItems.length} items shown</Badge>} />
+      {error && <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger"><p>{error}</p><button type="button" onClick={() => setRetryKey((value) => value + 1)} className="mt-2 font-semibold underline">Retry</button></div>}
 
       <div className="grid gap-5 xl:grid-cols-[260px_1fr]">
         <aside className="card p-4">
@@ -73,8 +95,9 @@ export default function CourseContentPage({ courseId }) {
             <div>
               <Select label="Type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                 <option>All</option>
-                <option>slide</option>
-                <option>question</option>
+                <option value="slide">Slides</option>
+                <option value="question">Questions</option>
+                <option value="flagged">Flagged only</option>
               </Select>
             </div>
 
@@ -130,7 +153,7 @@ export default function CourseContentPage({ courseId }) {
                     </div>
                   </div>
                   <div className="mt-4 flex items-center justify-between">
-                    <p className="max-w-xl text-sm text-muted">{item.content}</p>
+                    <div className="max-w-xl"><p className="text-sm text-muted">{item.content}</p><p className="mt-2 text-xs text-muted">Confidence: {item.confidence == null ? 'Not scored' : `${Math.round(Number(item.confidence) * (Number(item.confidence) <= 1 ? 100 : 1))}%`} · {item.flags.length} flags</p></div>
                     <ArrowRight className="h-4 w-4 text-muted" />
                   </div>
                 </Link>

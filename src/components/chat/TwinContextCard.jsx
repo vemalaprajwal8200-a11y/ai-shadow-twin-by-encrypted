@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BookOpen, Check, Edit2, FileText, Layers, Plus, Trash2, UserCheck, X } from 'lucide-react'
-import { mockCourses } from '../../data/mockData'
 import { Link } from 'react-router-dom'
+import { getCourseOverview, getPersonas, getUnits } from '../../data/supabaseData'
 
 /**
  * @param {{
@@ -39,6 +39,39 @@ export default function TwinContextCard({
 }) {
   const [editingChatId, setEditingChatId] = useState(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const [courses, setCourses] = useState([])
+  const [units, setUnits] = useState([])
+  const [personas, setPersonas] = useState([])
+  const [dataError, setDataError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    Promise.all([getCourseOverview(), getPersonas()]).then(([courseRows, personaRows]) => {
+      if (!active) return
+      setCourses(courseRows.map((course) => ({
+        ...course,
+        id: course.course_id || course.id,
+        title: course.course_name || course.title || course.name || 'Untitled course',
+        code: course.course_code || course.code || '',
+      })))
+      setPersonas(personaRows.filter((entry) => entry.is_active))
+    }).catch((error) => {
+      if (active) setDataError(error instanceof Error ? error.message : 'Could not load Twin context.')
+    })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    if (!courseId) {
+      setUnits([])
+      return undefined
+    }
+    getUnits(courseId).then((rows) => { if (active) setUnits(rows) }).catch((error) => {
+      if (active) setDataError(error instanceof Error ? error.message : 'Could not load units.')
+    })
+    return () => { active = false }
+  }, [courseId])
 
   const handleStartRename = (chat, e) => {
     e.stopPropagation()
@@ -82,6 +115,7 @@ export default function TwinContextCard({
 
       {/* Selectors */}
       <div className="space-y-4">
+        {dataError && <p role="alert" className="text-xs text-danger">{dataError}</p>}
         <div>
           <label htmlFor="context-course-select" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
             Course
@@ -92,8 +126,8 @@ export default function TwinContextCard({
             onChange={(e) => onCourseChange(e.target.value)}
             className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm font-medium text-text outline-none focus:border-primary"
           >
-            {mockCourses.map((c) => (
-              <option key={c.id} value={c.id}>{c.code}: {c.title}</option>
+            {courses.length === 0 ? <option value="">No courses yet</option> : courses.map((course) => (
+              <option key={course.id} value={course.id}>{course.code ? `${course.code}: ` : ''}{course.title}</option>
             ))}
           </select>
         </div>
@@ -108,10 +142,8 @@ export default function TwinContextCard({
             onChange={(e) => onUnitChange(e.target.value)}
             className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm font-medium text-text outline-none focus:border-primary"
           >
-            <option value="all">All Units (1, 2, 3)</option>
-            <option value="1">Unit 1: Arrays & Memory</option>
-            <option value="2">Unit 2: Trees & Traversals</option>
-            <option value="3">Unit 3: Graphs & Priority Queues</option>
+            <option value="all">All Units</option>
+            {units.map((unit) => <option key={unit.unit_id || unit.id} value={unit.unit_id || unit.unit_order}>{unit.unit_name || unit.name}</option>)}
           </select>
         </div>
 
@@ -126,15 +158,11 @@ export default function TwinContextCard({
               onChange={(e) => onPersonaChange(/** @type {any} */ (e.target.value))}
               className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm font-medium text-text outline-none focus:border-primary"
             >
-              <option value="Beginner">Beginner (Foundational, step-by-step)</option>
-              <option value="Average">Average (Standard undergraduate level)</option>
-              <option value="Careful">Careful (Rigorous, checks precision)</option>
+              {personas.length === 0 ? <option value={persona}>{persona}</option> : personas.map((entry) => <option key={entry.persona_id} value={entry.name}>{entry.name}</option>)}
             </select>
           </div>
           <p className="mt-1 text-[11px] text-muted">
-            {persona === 'Beginner' && 'Explains terms simply without skipping definitions.'}
-            {persona === 'Average' && 'Balances clarity with algorithmic terminology.'}
-            {persona === 'Careful' && 'Flags edge cases, ambiguities, and formal logic errors.'}
+            {personas.find((entry) => entry.name === persona)?.description || personas.find((entry) => entry.name === persona)?.prompt || 'The selected persona shapes the Twin response.'}
           </p>
         </div>
       </div>
